@@ -1897,5 +1897,6 @@ section.type-custom-order-received .powered-by-avify-icon svg {
 }
 
 body {
-	background-color: blue !important;
+	border: red solid 10px !important;
+	background-color: green !important;
 }
