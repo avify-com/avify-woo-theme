@@ -1788,6 +1788,10 @@ section.type-custom-order-received .powered-by-avify-icon svg {
 }
 /*LOGIC END*/
 
+body.product-template-default .woocommerce-product-gallery__image {
+	border: red solid 1px!important;
+}
+
 @media screen and (max-width: 1366px) {
 	.wrapper {
 		padding-right: 12px;
