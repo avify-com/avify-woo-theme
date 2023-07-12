@@ -1789,7 +1789,7 @@ section.type-custom-order-received .powered-by-avify-icon svg {
 /*LOGIC END*/
 
 body.product-template-default .woocommerce-product-gallery__image .wpgs-lightbox-icon img {
-	object-fit: contain;
+	object-fit: contain !important;
 }
 
 body.product-template-default .elementor-star-rating__wrapper {
