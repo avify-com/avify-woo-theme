@@ -1788,7 +1788,7 @@ section.type-custom-order-received .powered-by-avify-icon svg {
 }
 /*LOGIC END*/
 
-body.product-template-default .woocommerce-product-gallery__image .wpgs-lightbox-icon img {
+body.product-template-default .woo-product-gallery-slider .wpgs-lightbox-icon img {
 	object-fit: contain !important;
 }
 
