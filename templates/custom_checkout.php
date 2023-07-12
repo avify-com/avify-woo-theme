@@ -664,7 +664,7 @@
         									    				</div>
         									    			</div>
 
-        									    			<div class="review-order-product-item-price">
+        									    			<div class="review-order-product-item-price" data-item-quantity="<?= $quantity; ?>">
         									    				<div class="g__text type-9">
         									    					<?= get_woocommerce_currency_symbol(); ?>
         									    					<?= $product->get_price(); ?>
