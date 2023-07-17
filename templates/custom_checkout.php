@@ -866,10 +866,8 @@
         			</div>
         		</div>
         	</section>
-            
             <script>
             	var hideLocalPickUp = false;
-
             	<?php
             		if (get_field('checkout_hide_local_pickup', 'option') != '') {
             			?>
