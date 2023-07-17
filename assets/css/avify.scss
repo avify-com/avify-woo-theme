@@ -1886,21 +1886,8 @@ body.product-template-default {
   }
 }
 
-.elementor-add-to-cart.elementor-product-simple {
-  > form {
-    .avify-custom-options {
-      margin-bottom: 30px;
-      font-size: 15px;
-      border: rgba(0, 0, 0, 0.1) solid 1px;
-      border-radius: 5px;
-      padding: 10px;
-      min-width: 100%;
-    }
-  }
-}
-
-.woocommerce-variation-add-to-cart {
-  .avify-custom-options {
+.elementor-add-to-cart.elementor-product-simple > form .avify-custom-options,
+.woocommerce-variation-add-to-cart .avify-custom-options {
     margin-bottom: 30px;
     font-size: 15px;
     border: rgba(0, 0, 0, 0.1) solid 1px;
@@ -1910,7 +1897,6 @@ body.product-template-default {
     > div {
       margin: 15px 15px;
     }
-  }
 }
 
 @media screen and (max-width: 1366px) {
