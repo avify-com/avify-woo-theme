@@ -1,10 +1,10 @@
 /*
-	Theme Name:			Avify
+	Theme Name:			Avify V2
 	Description:		Avify theme
 	Theme URI:			https://avify.com/
 	Author:				Avify
 	Author URI:			https://avify.com/
-	Version:			1
+	Version:			2.0.0
 	Requires at least:	4.9
 	Requires PHP:		7.0
 	Tested up to:		5.7.1
@@ -27,7 +27,7 @@ html{line-height:1.15}body{margin:0}h1{font-size:2em;margin:.67em 0}b,strong{fon
 .wp-caption{}
 .wp-caption-text{}
 .gallery-item {display: inline-block;text-align: left;vertical-align: top;margin: 0 0 1.5em;padding: 0 1em 0 0;width: 50%}
-.gallery-columns-1 .gallery-item {width: 100%}}
+.gallery-columns-1 .gallery-item {width: 100%}
 .gallery-columns-2 .gallery-item {max-width: 50%}
 .gallery-item a { display: inline-block; max-width: 100%}
 .gallery-item a img {display: block; backface-visibility: hidden}

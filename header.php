@@ -14,7 +14,7 @@
 	<link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/reset.css">
 
 	<link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/g__text.css">
-	<link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/style.css">
+	<link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/css/style.css?v=2.0.0">
 	<!-- STYLES END -->
 </head>
 <body <?php body_class(); ?>>
