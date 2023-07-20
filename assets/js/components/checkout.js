@@ -194,36 +194,38 @@ export default class Checkout {
             }
 
             function checkIfCanOpenThirdStep(updateShipping) {
-                stepThreeIsOpen = false;
-                $yvToThirdStepButton.addClass("var-disabled");
+                if (!localPickUp) {
+                    stepThreeIsOpen = false;
+                    $yvToThirdStepButton.addClass("var-disabled");
 
-                if (mapClicked) {
-                    if (updateShipping == undefined || updateShipping != false) {
-                        updateShippingMethods();
-                    }
-                }
-
-                if (
-                    $yvShippingPais.val() != "" &&
-                    $yvShippingProvincia.val() != "" &&
-                    $yvShippingCanton.val() != "" &&
-                    $yvShippingDistrito.val() != "" &&
-                    $yvShippingPostal.val() != "" &&
-                    $yvShippingExacta.val() != ""
-                ) {
                     if (mapClicked) {
-                        if ($("section.type-custom-checkout .step-content-shipping-var-item input").is(":checked")) {
-                            const isNotPickup =
-                                $("section.type-custom-checkout .step-content-shipping-var-item input:checked")
-                                    .parents(".step-content-shipping-var-item")
-                                    .index();
-                            if (hideLocalPickUp === true ||
-                                (isNotPickup !== 0 &&
-                                    $("section.type-custom-checkout .step-content-shipping-var-item").length > 1)
-                            ) {
-                                if ($("#yv_shipping_method_loader")[0].offsetParent === null) {
-                                    stepThreeIsOpen = true;
-                                    $yvToThirdStepButton.removeClass("var-disabled");
+                        if (updateShipping == undefined || updateShipping != false) {
+                            updateShippingMethods();
+                        }
+                    }
+
+                    if (
+                        $yvShippingPais.val() != "" &&
+                        $yvShippingProvincia.val() != "" &&
+                        $yvShippingCanton.val() != "" &&
+                        $yvShippingDistrito.val() != "" &&
+                        $yvShippingPostal.val() != "" &&
+                        $yvShippingExacta.val() != ""
+                    ) {
+                        if (mapClicked) {
+                            if ($("section.type-custom-checkout .step-content-shipping-var-item input").is(":checked")) {
+                                const isNotPickup =
+                                    $("section.type-custom-checkout .step-content-shipping-var-item input:checked")
+                                        .parents(".step-content-shipping-var-item")
+                                        .index();
+                                if (hideLocalPickUp === true ||
+                                    (isNotPickup !== 0 &&
+                                        $("section.type-custom-checkout .step-content-shipping-var-item").length > 1)
+                                ) {
+                                    if ($("#yv_shipping_method_loader")[0].offsetParent === null) {
+                                        stepThreeIsOpen = true;
+                                        $yvToThirdStepButton.removeClass("var-disabled");
+                                    }
                                 }
                             }
                         }
