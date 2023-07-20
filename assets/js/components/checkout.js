@@ -1,24 +1,603 @@
 export default class Checkout {
     constructor() {
+        self.differentBillingAddress = false;
+        self.mapClicked = false;
         this.init();
     }
 
+    inputEmpty(inputs) {
+        let success = true;
+        inputs.map(input => {
+            const valid = (input.val() !== "" && input.val() !== '');
+            if (!valid) {
+                success = false;
+            }
+        });
+        return success;
+    }
+
+    bindChangeOnPais() {
+        const self = this,
+            $yvShippingPais = $("#yv_billing_pais"),
+            $yvShippingCountry = $("#shipping_country"),
+            $yvBillingCountry = $("#billing_country"),
+            $yvShippingProvincia = $("#yv_billing_provincia");
+
+        $yvShippingPais.bind("input propertychange", function () {
+            self.checkIfCanOpenThirdStep();
+
+            $yvShippingCountry.val($yvShippingPais.val());
+            if (!self.differentBillingAddress) {
+                $yvBillingCountry.val($yvShippingPais.val());
+            }
+
+            $yvShippingCountry.trigger("change");
+            if (!self.differentBillingAddress) {
+                $yvBillingCountry.trigger("change");
+            }
+
+            $yvShippingProvincia.html("");
+            $("#shipping_state option").each(function () {
+                $yvShippingProvincia.append($(this).clone());
+            });
+            if (self.inputEmpty([$("#shipping_state")])) {
+                $yvShippingProvincia.val($("#shipping_state").val());
+            } else {
+                $yvShippingProvincia.find("option").eq(0).attr("selected", "selected");
+            }
+
+            self.changeTagForCanton();
+        });
+    }
+
+    getShippingMethods() {
+        const self = this,
+            $yvShippingMethodList = $("#yv_shipping_method"),
+            yvShippingMethodItemHTML = $("#yv_shipping_method .step-content-shipping-var-item")
+                .addClass("yv-new").parent().html();
+
+        $("body").on("updated_checkout", function () {
+            const $shippingMethodItem = $("body").find("#shipping_method li");
+            $yvShippingMethodList.html("");
+            if ($shippingMethodItem[0]) {
+                $shippingMethodItem.each(function (i) {
+                    $yvShippingMethodList.append(yvShippingMethodItemHTML);
+                    if ($(self).find("input").is(":checked")) {
+                        $yvShippingMethodList
+                            .find(".yv-new")
+                            .find("input")
+                            .prop("checked", true);
+                    }
+                    $yvShippingMethodList
+                        .find(".yv-new")
+                        .attr("data-shipping-value", $(this).find("input").val());
+                    $yvShippingMethodList
+                        .find(".yv-new")
+                        .find(".step-content-shipping-var-item-text .g__text")
+                        .text($(this).find("label")[0].childNodes[0].nodeValue);
+                    $yvShippingMethodList
+                        .find(".yv-new")
+                        .find(".step-content-shipping-var-item-text-2 .g__text")
+                        .text($(this).find(".amount").text());
+                    $yvShippingMethodList.find(".yv-new").removeClass("yv-new");
+                });
+            } else {
+                $yvShippingMethodList.append(yvShippingMethodItemHTML);
+                $yvShippingMethodList
+                    .find(".yv-new")
+                    .find(".step-content-shipping-var-item-radio")
+                    .remove();
+                $yvShippingMethodList
+                    .find(".yv-new")
+                    .find(".step-content-shipping-var-item-text .g__text")
+                    .text($(".woocommerce-no-shipping-available-html").text());
+                $yvShippingMethodList
+                    .find(".yv-new")
+                    .find(".step-content-shipping-var-item-text-2 .g__text")
+                    .remove();
+                $yvShippingMethodList.find(".yv-new").removeClass("yv-new");
+            }
+
+            $yvShippingMethodList
+                .find(
+                    '.step-content-shipping-var-item[data-shipping-value="' +
+                    "avfdeliveries-instorepickup0" +
+                    '"]'
+                ).hide();
+
+            $yvShippingMethodList
+                .find(
+                    '.step-content-shipping-var-item[data-shipping-value="' +
+                    "avfdeliveries-instorepickup" +
+                    '"]'
+                ).hide();
+
+            $yvShippingMethodList
+                .find(
+                    '.step-content-shipping-var-item[data-shipping-value="' +
+                    "local_pickup:16" +
+                    '"]'
+                ).hide();
+
+            $yvShippingMethodList.show();
+            $yvShippingMethodLoader.hide();
+
+            clearTimeout(self.showShippingMethodsAnywayTimeout);
+        });
+    }
+
+    updateShippingMethods() {
+        const self = this,
+            $yvShippingMethodList = $("#yv_shipping_method"),
+            $yvShippingMethodLoader = $("#yv_shipping_method_loader");
+        $yvShippingMethodList.hide();
+        $yvShippingMethodLoader.show();
+
+        clearTimeout(self.showShippingMethodsAnywayTimeout);
+        self.showShippingMethodsAnywayTimeout = setTimeout(function () {
+            $yvShippingMethodList.show();
+            $yvShippingMethodLoader.hide();
+            self.checkIfCanOpenThirdStep(false);
+        }, 5000);
+    }
+
+    function fireKeydownEventOnElement($elem) {
+        $elem.trigger("keydown");
+    }
+
+    function checkIfCanOpenSecondStep = () => {
+        if ($yvName.val() != "" && $yvEmail.val() != "" && $yvTel.val() != "") {
+            $yvToSecondStepButton.removeClass("var-disabled");
+        } else {
+            $yvToSecondStepButton.addClass("var-disabled");
+        }
+    }
+
+    function appendMap() {
+        var $mapOrig = $("#lpac-map-container"),
+            $mapPlace = $(".step-content-map-container");
+
+        $mapPlace.append($mapOrig);
+    }
+
+    function checkIfCanOpenThirdStep(updateShipping) {
+        console.log('checkIfCanOpenThirdStep');
+
+        $yvToThirdStepButton.addClass("var-disabled");
+
+        if (mapClicked && updateShipping) {
+            self.updateShippingMethods();
+        }
+
+        if (
+            $yvShippingPais.val() != "" &&
+            $yvShippingProvincia.val() != "" &&
+            $yvShippingCanton.val() != "" &&
+            $yvShippingDistrito.val() != "" &&
+            $yvShippingPostal.val() != "" &&
+            $yvShippingExacta.val() != ""
+        ) {
+            if (mapClicked) {
+                if ($("section.type-custom-checkout .step-content-shipping-var-item input").is(":checked")) {
+                    const isNotPickup =
+                        $("section.type-custom-checkout .step-content-shipping-var-item input:checked")
+                            .parents(".step-content-shipping-var-item")
+                            .index();
+                    if (hideLocalPickUp ||
+                        (isNotPickup !== 0 &&
+                            $("section.type-custom-checkout .step-content-shipping-var-item").length > 1)
+                    ) {
+                        if ($("#yv_shipping_method_loader")[0].offsetParent === null) {
+                            $yvToThirdStepButton.removeClass("var-disabled");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function changeTagForCanton() {
+        if ($("#shipping_city").parent().find("select")[0]) {
+            $yvShippingCanton.replaceWith(
+                '<select id="' + $yvShippingCanton.attr("id") + '">'
+            );
+            $yvShippingCanton = $("#yv_billing_canton");
+
+            self.bindChangeOnCanton();
+
+            $yvShippingCanton.html("");
+
+            $("#shipping_city option").each(function () {
+                $yvShippingCanton.append($(this).clone());
+            });
+
+            if ($("#shipping_city").val() != "") {
+                $yvShippingCanton.val($("#shipping_city").val());
+            } else {
+                $yvShippingCanton.find("option").eq(0).attr("selected", "selected");
+            }
+        } else {
+            $yvShippingCanton.replaceWith(
+                '<input id="' + $yvShippingCanton.attr("id") + '">'
+            );
+            $yvShippingCanton = $("#yv_billing_canton");
+
+            bindChangeOnCanton();
+        }
+    }
+
+    bindChangeOnCanton() {
+        const self = this;
+        $yvShippingCanton.bind("input propertychange", function () {
+            self.checkIfCanOpenThirdStep();
+
+            $("#shipping_city").val($yvShippingCanton.val());
+            if (!self.differentBillingAddress) {
+                $("#billing_city").val($yvShippingCanton.val());   
+            }
+
+            $("#shipping_city").trigger("change");
+            if (!self.differentBillingAddress) {
+                $("#billing_city").trigger("change");   
+            }
+
+            $yvShippingPostal.val($("#shipping_postcode").val());
+        });
+    }
+
+    function setupBillingAddressForm() {
+        if ($("#billing_country").attr("type") == "hidden") {
+            $yvDifShippingPais.val(
+                $("#billing_country_field")
+                    .find(".woocommerce-input-wrapper strong")
+                    .text()
+            );
+        } else {
+            $yvDifShippingPais.replaceWith(
+                '<select id="' + $yvDifShippingPais.attr("id") + '">'
+            );
+            $yvDifShippingPais = $("#yv_dif_billing_pais");
+
+            bindChangeOnDifPais();
+
+            $yvDifShippingPais.html("");
+
+            $("#billing_country option").each(function () {
+                $yvDifShippingPais.append($(this).clone());
+            });
+
+            if ($("#billing_country").val() != "") {
+                $yvDifShippingPais.val($("#billing_country").val());
+            } else {
+                $yvDifShippingPais.find("option").eq(0).attr("selected", "selected");
+            }
+        }
+
+        changeTagForDifCanton();
+
+        // shipping state
+        $yvDifShippingProvincia.html("");
+
+        $("#billing_state option").each(function () {
+            $yvDifShippingProvincia.append($(this).clone());
+        });
+
+        if ($("#billing_state").val() != "") {
+            $yvDifShippingProvincia.val($("#billing_state").val());
+        } else {
+            $yvDifShippingProvincia.find("option").eq(0).attr("selected", "selected");
+        }
+        // shipping state end
+
+        // shipping town select
+        setTimeout(function () {
+            $yvDifShippingCanton.html("");
+
+            $("#billing_city option").each(function () {
+                $yvDifShippingCanton.append($(this).clone());
+            });
+
+            if ($("#billing_city").val() != "") {
+                $yvDifShippingCanton.val($("#billing_city").val());
+            } else {
+                $yvDifShippingCanton.find("option").eq(0).attr("selected", "selected");
+            }
+        }, 1);
+        // shipping town end
+    }
+
+    function bindChangeOnDifPais() {
+        $yvDifShippingPais.bind("input propertychange", function () {
+            $("#billing_country").val($yvDifShippingPais.val());
+
+            $("#billing_country").trigger("change");
+
+            // fill custom select
+            $yvDifShippingProvincia.html("");
+
+            $("#billing_state option").each(function () {
+                $yvDifShippingProvincia.append($(this).clone());
+            });
+
+            if ($("#billing_state").val() != "") {
+                $yvDifShippingProvincia.val($("#billing_state").val());
+            } else {
+                $yvDifShippingProvincia
+                    .find("option")
+                    .eq(0)
+                    .attr("selected", "selected");
+            }
+            // fill custom select end
+
+            changeTagForDifCanton();
+        });
+    }
+
+    function changeTagForDifCanton() {
+        if ($("#billing_city").parent().find("select")[0]) {
+            $yvDifShippingCanton.replaceWith(
+                '<select id="' + $yvDifShippingCanton.attr("id") + '">'
+            );
+            $yvDifShippingCanton = $("#yv_dif_billing_canton");
+
+            bingChangeOnDifCanton();
+
+            $yvDifShippingCanton.html("");
+
+            $("#billing_city option").each(function () {
+                $yvDifShippingCanton.append($(this).clone());
+            });
+
+            if ($("#billing_city").val() != "") {
+                $yvDifShippingCanton.val($("#billilng_city").val());
+            } else {
+                $yvDifShippingCanton.find("option").eq(0).attr("selected", "selected");
+            }
+        } else {
+            $yvDifShippingCanton.replaceWith(
+                '<input id="' + $yvDifShippingCanton.attr("id") + '">'
+            );
+            $yvDifShippingCanton = $("#yv_dif_billing_canton");
+
+            bingChangeOnDifCanton();
+        }
+    }
+
+    function bingChangeOnDifCanton() {
+        $yvDifShippingCanton.bind("input propertychange", function () {
+            $("#billing_city").val($yvDifShippingCanton.val());
+
+            $("#billing_city").trigger("change");
+
+            $yvDifShippingPostal.val($("#billing_postcode").val());
+        });
+    }
+
+
+    step1() {
+        let $yvName = $("#yv_billing_name"),
+            $yvEmail = $("#yv_billing_email"),
+            $yvTel = $("#yv_billing_tel"),
+            $yvToSecondStepButton = $("#yv_to_second_step_button"),
+            $step = $(".step-content-item"),
+            $stepTab = $("section.type-custom-checkout .step-item");
+
+        setTimeout(function () {
+            checkIfCanOpenSecondStep();
+        }, 200);
+
+        $yvName.bind("input propertychange", function () {
+            $("#billing_first_name").val($yvName.val());
+            $("#shipping_first_name").val($yvName.val());
+            checkIfCanOpenSecondStep();
+        });
+        $yvEmail.bind("input propertychange", function () {
+            $("#billing_email").val($yvEmail.val());
+            checkIfCanOpenSecondStep();
+        });
+        $yvTel.bind("input propertychange", function () {
+            $("#billing_phone").val($yvTel.val());
+            checkIfCanOpenSecondStep();
+        });
+
+        $yvToSecondStepButton.on("click", function () {
+            $step.removeClass("active");
+            $step.eq(1).addClass("active");
+            $stepTab.eq(0).addClass("completed");
+            $stepTab.eq(1).addClass("active");
+        });
+    }
+
+    step2() {
+        const self = this;
+        self.mapClicked = false;
+
+        let $yvShippingPais = $("#yv_billing_pais"),
+            $yvShippingProvincia = $("#yv_billing_provincia"),
+            $yvShippingCanton = $("#yv_billing_canton"),
+            $yvShippingDistrito = $("#yv_billing_distrito"),
+            $yvShippingPostal = $("#yv_billing_postal"),
+            $yvShippingExacta = $("#yv_billing_exacta"),
+            $yvToThirdStepButton = $("#yv_to_third_step_button"),
+            $shippingOrPick = $("#yv_shipping_or_pick"),
+            $yvShippingMethodList = $("#yv_shipping_method"),
+            $yvShippingMethodLoader = $("#yv_shipping_method_loader"),
+            $shippingState = $("#shipping_state"),
+            $map = $("#yv_map");
+            timeout;
+
+        $(".step-content-shipping-method-content-item-2").hide();
+        if (hideLocalPickUp) {
+            $(".step-content-shipping-method-item").eq(1).hide();
+        }
+
+        $yvShippingMethodList.hide();
+        $yvShippingMethodList.html("");
+        $yvShippingMethodLoader.hide();
+
+        $yvShippingMethodList.on(
+            "click", ".step-content-shipping-var-item",
+            function () {
+                $("body")
+                    .find("#shipping_method li")
+                    .eq($(this).index())
+                    .find("input")
+                    .click();
+                self.checkIfCanOpenThirdStep(false);
+            }
+        );
+
+        self.bindChangeOnPais();
+
+        $yvShippingProvincia.bind("input propertychange", function () {
+            self.checkIfCanOpenThirdStep();
+
+            $shippingState.val($yvShippingProvincia.val());
+            if (!self.differentBillingAddress) {
+                $("#billing_state").val($yvShippingProvincia.val());
+            }
+
+            $shippingState.trigger("change");
+            if (!self.differentBillingAddress) {
+                $("#billing_state").trigger("change");
+            }
+
+            self.changeTagForCanton();
+        });
+
+        self.bindChangeOnCanton();
+
+        $yvShippingDistrito.bind("input propertychange", function () {
+            self.checkIfCanOpenThirdStep();
+
+            $("#shipping_address_1").val($yvShippingDistrito.val());
+            if (!self.differentBillingAddress) {
+                $("#billing_address_1").val($yvShippingDistrito.val());
+            }
+x
+            self.fireKeydownEventOnElement($("#shipping_address_1"));
+        });
+
+        $yvShippingPostal.bind("input propertychange", function () {
+            checkIfCanOpenThirdStep();
+
+            $("#shipping_postcode").val($yvShippingPostal.val());
+            if (!self.differentBillingAddress) {
+                $("#billing_postcode").val($yvShippingPostal.val());
+            }
+
+            fireKeydownEventOnElement($("#shipping_postcode"));
+        });
+
+        $yvShippingExacta.bind("input propertychange", function () {
+            checkIfCanOpenThirdStep(false);
+
+            $("#shipping_exact_direction").val($yvShippingExacta.val());
+            if (!self.differentBillingAddress) {
+                $("#billing_exact_direction").val($yvShippingExacta.val());
+            }
+
+            fireKeydownEventOnElement($("#shipping_exact_direction"));
+        });
+
+        $map.on("click", function () {
+            self.mapClicked = true;
+
+            $("section.type-custom-checkout .step-content-map-text-2").hide();
+            $yvShippingMethodList.hide();
+            $yvShippingMethodLoader.show();
+
+            clearTimeout(timeout);
+
+            timeout = setTimeout(function () {
+                self.getShippingMethods();
+
+                if (!self.differentBillingAddress) {
+                    if (!$("#billing_country").is('input[type="hidden"]')) {
+                        $("#billing_country").val($yvShippingPais.val());
+                        $("#billing_country").trigger("change");
+                    }
+
+                    $("#billing_state").val($yvShippingProvincia.val());
+                    $("#billing_state").trigger("change");
+                    $("#billing_city").val($yvShippingCanton.val());
+                    $("#billing_city").trigger("change");
+                    $("#billing_address_1").val($yvShippingDistrito.val());
+                    $("#billing_postcode").val($yvShippingPostal.val());
+                    $("#billing_exact_direction").val($yvShippingExacta.val());
+                }
+
+                if (!$("#shipping_country").is('input[type="hidden"]')) {
+                    $("#shipping_country").val($yvShippingPais.val());
+                    $("#shipping_country").trigger("change");
+                }
+
+                $("#shipping_state").val($yvShippingProvincia.val());
+                $("#shipping_state").trigger("change");
+                $("#shipping_city").val($yvShippingCanton.val());
+                $("#shipping_city").trigger("change");
+                $("#shipping_address_1").val($yvShippingDistrito.val());
+                $("#shipping_postcode").val($yvShippingPostal.val());
+                $("#shipping_exact_direction").val($yvShippingExacta.val());
+
+                $(".woocommerce-checkout").trigger("update_checkout");
+            }, 500);
+        });
+        $map.trigger("click");
+
+        $shippingOrPick.on("click", function () {
+            if ($("#yv_shipping_or_pick_1").is(":checked")) {
+                $(".step-content-shipping-method-content-item-1").show();
+                $(".step-content-shipping-method-content-item-2").hide();
+
+                $yvToThirdStepButton.addClass("var-disabled");
+
+                checkIfCanOpenThirdStep();
+
+                localPickUp = false;
+            }
+
+            if (pickupOption.is(":checked")) {
+                $(".step-content-shipping-method-content-item-2").show();
+                $(".step-content-shipping-method-content-item-1").hide();
+
+                $yvToThirdStepButton.removeClass("var-disabled");
+
+                var $shippingMethodItem = $("body")
+                    .find("#shipping_method li")
+                    .eq(0)
+                    .find("input");
+
+                $shippingMethodItem.click();
+
+                localPickUp = true;
+            }
+        });
+
+        $yvToThirdStepButton.on("click", function () {
+            $step.removeClass("active");
+
+            $step.eq(2).addClass("active");
+
+            $stepTab.eq(1).addClass("completed");
+            $stepTab.eq(2).addClass("active");
+        });
+    }
+
     init() {
+        const self = this;
+        const orderReceived = $(".woocommerce-order-received");
+
         if ($("body.woocommerce-checkout")[0] &&
             $(".type-custom-checkout")[0] &&
-            !$(".woocommerce-order-received")[0]
+            !orderReceived[0]
         ) {
-            $(".yv-header-nav, .yv-header-search, .yv-header-cart").hide();
-            $("footer").hide();
+            $(".yv-header-nav, .yv-header-search, .yv-header-cart, footer").hide();
 
-            let $yvShippingDistrito, $yvShippingPostal, $yvShippingExacta, $yvShippingMethodLoader,
-                $yvDifShippingDistrito,$yvDifShippingPostal, $yvDifShippingExacta;
-
-            // fill custom fields based on original
             setTimeout(function () {
-                $yvName.val($("#billing_first_name").val());
-                $("#billing_first_name").val($yvName.val());
-                $("#shipping_first_name").val($yvName.val());
+                const billingFirstNameVal = $("#billing_first_name").val();
+                $yvName.val(billingFirstNameVal);
+                $("#shipping_first_name").val(billingFirstNameVal);
                 $yvEmail.val($("#billing_email").val());
                 $yvTel.val($("#billing_phone").val());
 
@@ -34,7 +613,7 @@ export default class Checkout {
                     );
                     $yvShippingPais = $("#yv_billing_pais");
 
-                    bindChangeOnPais();
+                    self.bindChangeOnPais();
 
                     $yvShippingPais.html("");
 
@@ -83,14 +662,6 @@ export default class Checkout {
                 }, 2000);
                 // shipping town end
             }, 100);
-            // fill custom fields based on original end
-
-            function appendMap() {
-                var $mapOrig = $("#lpac-map-container"),
-                    $mapPlace = $(".step-content-map-container");
-
-                $mapPlace.append($mapOrig);
-            }
 
             if ($("#lpac-map-container")[0]) {
                 appendMap();
@@ -103,11 +674,6 @@ export default class Checkout {
 
             $step.eq(0).addClass("active");
             $stepTab.eq(0).addClass("active");
-
-            var stepTwoIsOpen = false,
-                stepThreeIsOpen = false;
-
-            var differentBillingAddress = false;
 
             var localPickUp = false;
 
@@ -123,451 +689,8 @@ export default class Checkout {
                 }
             });
 
-            // STEP 1
-            var $yvName = $("#yv_billing_name"),
-                $yvEmail = $("#yv_billing_email"),
-                $yvTel = $("#yv_billing_tel");
-
-            var $yvToSecondStepButton = $("#yv_to_second_step_button");
-
-            function checkIfCanOpenSecondStep() {
-                if ($yvName.val() != "" && $yvEmail.val() != "" && $yvTel.val() != "") {
-                    stepTwoIsOpen = true;
-                    $yvToSecondStepButton.removeClass("var-disabled");
-                } else {
-                    stepTwoIsOpen = false;
-                    $yvToSecondStepButton.addClass("var-disabled");
-                }
-            }
-
-            setTimeout(function () {
-                checkIfCanOpenSecondStep();
-            }, 200);
-
-            $yvName.bind("input propertychange", function () {
-                $("#billing_first_name").val($yvName.val());
-                $("#shipping_first_name").val($yvName.val());
-
-                checkIfCanOpenSecondStep();
-            });
-
-            $yvEmail.bind("input propertychange", function () {
-                $("#billing_email").val($yvEmail.val());
-
-                checkIfCanOpenSecondStep();
-            });
-
-            $yvTel.bind("input propertychange", function () {
-                $("#billing_phone").val($yvTel.val());
-
-                checkIfCanOpenSecondStep();
-            });
-
-            $yvToSecondStepButton.on("click", function () {
-                $step.removeClass("active");
-
-                $step.eq(1).addClass("active");
-
-                $stepTab.eq(0).addClass("completed");
-                $stepTab.eq(1).addClass("active");
-            });
-            // STEP 1 END
-
-            // STEP 2
-            var $yvShippingPais = $("#yv_billing_pais"),
-                $yvShippingProvincia = $("#yv_billing_provincia"),
-                $yvShippingCanton = $("#yv_billing_canton");
-            $yvShippingDistrito = $("#yv_billing_distrito");
-            $yvShippingPostal = $("#yv_billing_postal");
-            $yvShippingExacta = $("#yv_billing_exacta");
-
-            var $yvToThirdStepButton = $("#yv_to_third_step_button");
-
-            var $shippingOrPick = $("#yv_shipping_or_pick");
-
-            var mapClicked = false;
-
-            $(".step-content-shipping-method-content-item-2").hide();
-
-            if (hideLocalPickUp === true) {
-                $(".step-content-shipping-method-item").eq(1).hide();
-            }
-
-            function checkIfCanOpenThirdStep(updateShipping) {
-                stepThreeIsOpen = false;
-                $yvToThirdStepButton.addClass("var-disabled");
-
-                if (mapClicked) {
-                    if (updateShipping == undefined || updateShipping != false) {
-                        updateShippingMethods();
-                    }
-                }
-
-                if (
-                    $yvShippingPais.val() != "" &&
-                    $yvShippingProvincia.val() != "" &&
-                    $yvShippingCanton.val() != "" &&
-                    $yvShippingDistrito.val() != "" &&
-                    $yvShippingPostal.val() != "" &&
-                    $yvShippingExacta.val() != ""
-                ) {
-                    if (mapClicked) {
-                        if ($("section.type-custom-checkout .step-content-shipping-var-item input").is(":checked")) {
-                            const isNotPickup =
-                                $("section.type-custom-checkout .step-content-shipping-var-item input:checked")
-                                    .parents(".step-content-shipping-var-item")
-                                    .index();
-                            if (hideLocalPickUp === true ||
-                                (isNotPickup !== 0 &&
-                                    $("section.type-custom-checkout .step-content-shipping-var-item").length > 1)
-                            ) {
-                                if ($("#yv_shipping_method_loader")[0].offsetParent === null) {
-                                    stepThreeIsOpen = true;
-                                    $yvToThirdStepButton.removeClass("var-disabled");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            var showShippingMethodsAnywayTimeout;
-
-            function updateShippingMethods() {
-                $yvShippingMethodList.hide();
-                $yvShippingMethodLoader.show();
-
-                clearTimeout(showShippingMethodsAnywayTimeout);
-
-                showShippingMethodsAnywayTimeout = setTimeout(function () {
-                    $yvShippingMethodList.show();
-                    $yvShippingMethodLoader.hide();
-
-                    checkIfCanOpenThirdStep(false);
-                }, 5000);
-            }
-
-            let $yvShippingMethodList = $("#yv_shipping_method"),
-                yvShippingMethodItemHTML = $("#yv_shipping_method .step-content-shipping-var-item")
-                .addClass("yv-new")
-                .parent()
-                .html();
-            $yvShippingMethodLoader = $("#yv_shipping_method_loader");
-
-            $yvShippingMethodList.hide();
-            $yvShippingMethodList.html("");
-            $yvShippingMethodLoader.hide();
-
-            function getShippingMethods() {
-                jQuery("body").on("updated_checkout", function () {
-                    var $shippingMethodItem = $("body").find("#shipping_method li");
-
-                    $yvShippingMethodList.html("");
-
-                    if ($shippingMethodItem[0]) {
-                        $shippingMethodItem.each(function (i) {
-                            $yvShippingMethodList.append(yvShippingMethodItemHTML);
-
-                            if ($(this).find("input").is(":checked")) {
-                                $yvShippingMethodList
-                                    .find(".yv-new")
-                                    .find("input")
-                                    .prop("checked", true);
-                            }
-
-                            $yvShippingMethodList
-                                .find(".yv-new")
-                                .attr("data-shipping-value", $(this).find("input").val());
-                            $yvShippingMethodList
-                                .find(".yv-new")
-                                .find(".step-content-shipping-var-item-text .g__text")
-                                .text($(this).find("label")[0].childNodes[0].nodeValue);
-                            $yvShippingMethodList
-                                .find(".yv-new")
-                                .find(".step-content-shipping-var-item-text-2 .g__text")
-                                .text($(this).find(".amount").text());
-
-                            $yvShippingMethodList.find(".yv-new").removeClass("yv-new");
-                        });
-                    } else {
-                        $yvShippingMethodList.append(yvShippingMethodItemHTML);
-
-                        $yvShippingMethodList
-                            .find(".yv-new")
-                            .find(".step-content-shipping-var-item-radio")
-                            .remove();
-                        $yvShippingMethodList
-                            .find(".yv-new")
-                            .find(".step-content-shipping-var-item-text .g__text")
-                            .text($(".woocommerce-no-shipping-available-html").text());
-                        $yvShippingMethodList
-                            .find(".yv-new")
-                            .find(".step-content-shipping-var-item-text-2 .g__text")
-                            .remove();
-
-                        $yvShippingMethodList.find(".yv-new").removeClass("yv-new");
-                    }
-
-                    $yvShippingMethodList
-                        .find(
-                            '.step-content-shipping-var-item[data-shipping-value="' +
-                            "avfdeliveries-instorepickup0" +
-                            '"]'
-                        )
-                        .hide();
-
-                    $yvShippingMethodList
-                        .find(
-                            '.step-content-shipping-var-item[data-shipping-value="' +
-                            "avfdeliveries-instorepickup" +
-                            '"]'
-                        )
-                        .hide();
-
-                    $yvShippingMethodList
-                        .find(
-                            '.step-content-shipping-var-item[data-shipping-value="' +
-                            "local_pickup:16" +
-                            '"]'
-                        )
-                        .hide();
-
-                    $yvShippingMethodList.show();
-                    $yvShippingMethodLoader.hide();
-
-                    clearTimeout(showShippingMethodsAnywayTimeout);
-                });
-            }
-
-            function fireKeydownEventOnElement($elem) {
-                $elem.trigger("keydown");
-            }
-
-            $yvShippingMethodList.on(
-                "click",
-                ".step-content-shipping-var-item",
-                function () {
-                    var $shippingMethodItem = $("body")
-                        .find("#shipping_method li")
-                        .eq($(this).index())
-                        .find("input");
-
-                    $shippingMethodItem.click();
-
-                    checkIfCanOpenThirdStep(false);
-                }
-            );
-
-            function bindChangeOnPais() {
-                $yvShippingPais.bind("input propertychange", function () {
-                    checkIfCanOpenThirdStep();
-
-                    $("#shipping_country").val($yvShippingPais.val());
-                    if (differentBillingAddress == false)
-                        $("#billing_country").val($yvShippingPais.val());
-
-                    $("#shipping_country").trigger("change");
-                    if (differentBillingAddress == false)
-                        $("#billing_country").trigger("change");
-
-                    // fill custom select
-                    $yvShippingProvincia.html("");
-
-                    $("#shipping_state option").each(function () {
-                        $yvShippingProvincia.append($(this).clone());
-                    });
-
-                    if ($("#shipping_state").val() != "") {
-                        $yvShippingProvincia.val($("#shipping_state").val());
-                    } else {
-                        $yvShippingProvincia.find("option").eq(0).attr("selected", "selected");
-                    }
-                    // fill custom select end
-
-                    changeTagForCanton();
-                });
-            }
-
-            bindChangeOnPais();
-
-            function changeTagForCanton() {
-                if ($("#shipping_city").parent().find("select")[0]) {
-                    $yvShippingCanton.replaceWith(
-                        '<select id="' + $yvShippingCanton.attr("id") + '">'
-                    );
-                    $yvShippingCanton = $("#yv_billing_canton");
-
-                    bingChangeOnCanton();
-
-                    $yvShippingCanton.html("");
-
-                    $("#shipping_city option").each(function () {
-                        $yvShippingCanton.append($(this).clone());
-                    });
-
-                    if ($("#shipping_city").val() != "") {
-                        $yvShippingCanton.val($("#shipping_city").val());
-                    } else {
-                        $yvShippingCanton.find("option").eq(0).attr("selected", "selected");
-                    }
-                } else {
-                    $yvShippingCanton.replaceWith(
-                        '<input id="' + $yvShippingCanton.attr("id") + '">'
-                    );
-                    $yvShippingCanton = $("#yv_billing_canton");
-
-                    bingChangeOnCanton();
-                }
-            }
-
-            $yvShippingProvincia.bind("input propertychange", function () {
-                checkIfCanOpenThirdStep();
-
-                $("#shipping_state").val($yvShippingProvincia.val());
-                if (differentBillingAddress == false)
-                    $("#billing_state").val($yvShippingProvincia.val());
-
-                $("#shipping_state").trigger("change");
-                if (differentBillingAddress == false) $("#billing_state").trigger("change");
-
-                // fill custom select
-                changeTagForCanton();
-                // fill custom select end
-            });
-
-            function bingChangeOnCanton() {
-                $yvShippingCanton.bind("input propertychange", function () {
-                    checkIfCanOpenThirdStep();
-
-                    $("#shipping_city").val($yvShippingCanton.val());
-                    if (differentBillingAddress == false)
-                        $("#billing_city").val($yvShippingCanton.val());
-
-                    $("#shipping_city").trigger("change");
-                    if (differentBillingAddress == false)
-                        $("#billing_city").trigger("change");
-
-                    $yvShippingPostal.val($("#shipping_postcode").val());
-                });
-            }
-
-            bingChangeOnCanton();
-
-            $yvShippingDistrito.bind("input propertychange", function () {
-                checkIfCanOpenThirdStep();
-
-                $("#shipping_address_1").val($yvShippingDistrito.val());
-                if (differentBillingAddress == false)
-                    $("#billing_address_1").val($yvShippingDistrito.val());
-
-                fireKeydownEventOnElement($("#shipping_address_1"));
-            });
-
-            $yvShippingPostal.bind("input propertychange", function () {
-                checkIfCanOpenThirdStep();
-
-                $("#shipping_postcode").val($yvShippingPostal.val());
-                if (differentBillingAddress == false)
-                    $("#billing_postcode").val($yvShippingPostal.val());
-
-                fireKeydownEventOnElement($("#shipping_postcode"));
-            });
-
-            $yvShippingExacta.bind("input propertychange", function () {
-                checkIfCanOpenThirdStep(false);
-
-                $("#shipping_exact_direction").val($yvShippingExacta.val());
-                if (differentBillingAddress == false)
-                    $("#billing_exact_direction").val($yvShippingExacta.val());
-
-                fireKeydownEventOnElement($("#shipping_exact_direction"));
-            });
-
-            var timeout;
-
-            $("#yv_map").on("click", function () {
-                mapClicked = true;
-
-                $("section.type-custom-checkout .step-content-map-text-2").hide();
-                $yvShippingMethodList.hide();
-                $yvShippingMethodLoader.show();
-
-                clearTimeout(timeout);
-
-                timeout = setTimeout(function () {
-                    getShippingMethods();
-
-                    if (differentBillingAddress == false) {
-                        if (!$("#billing_country").is('input[type="hidden"]')) {
-                            $("#billing_country").val($yvShippingPais.val());
-                            $("#billing_country").trigger("change");
-                        }
-
-                        $("#billing_state").val($yvShippingProvincia.val());
-                        $("#billing_state").trigger("change");
-                        $("#billing_city").val($yvShippingCanton.val());
-                        $("#billing_city").trigger("change");
-                        $("#billing_address_1").val($yvShippingDistrito.val());
-                        $("#billing_postcode").val($yvShippingPostal.val());
-                        $("#billing_exact_direction").val($yvShippingExacta.val());
-                    }
-
-                    if (!$("#shipping_country").is('input[type="hidden"]')) {
-                        $("#shipping_country").val($yvShippingPais.val());
-                        $("#shipping_country").trigger("change");
-                    }
-
-                    $("#shipping_state").val($yvShippingProvincia.val());
-                    $("#shipping_state").trigger("change");
-                    $("#shipping_city").val($yvShippingCanton.val());
-                    $("#shipping_city").trigger("change");
-                    $("#shipping_address_1").val($yvShippingDistrito.val());
-                    $("#shipping_postcode").val($yvShippingPostal.val());
-                    $("#shipping_exact_direction").val($yvShippingExacta.val());
-
-                    $(".woocommerce-checkout").trigger("update_checkout");
-                }, 500);
-            });
-            $("#yv_map").trigger("click");
-
-            $shippingOrPick.on("click", function () {
-                if ($("#yv_shipping_or_pick_1").is(":checked")) {
-                    $(".step-content-shipping-method-content-item-1").show();
-                    $(".step-content-shipping-method-content-item-2").hide();
-
-                    $yvToThirdStepButton.addClass("var-disabled");
-
-                    checkIfCanOpenThirdStep();
-
-                    localPickUp = false;
-                }
-
-                if ($("#yv_shipping_or_pick_2").is(":checked")) {
-                    $(".step-content-shipping-method-content-item-2").show();
-                    $(".step-content-shipping-method-content-item-1").hide();
-
-                    $yvToThirdStepButton.removeClass("var-disabled");
-
-                    var $shippingMethodItem = $("body")
-                        .find("#shipping_method li")
-                        .eq(0)
-                        .find("input");
-
-                    $shippingMethodItem.click();
-
-                    localPickUp = true;
-                }
-            });
-
-            $yvToThirdStepButton.on("click", function () {
-                $step.removeClass("active");
-
-                $step.eq(2).addClass("active");
-
-                $stepTab.eq(1).addClass("completed");
-                $stepTab.eq(2).addClass("active");
-            });
-            // STEP 2 END
+            self.step1();
+            self.step2();
 
             // STEP 3
             var $yvDifShippingPais = $("#yv_dif_billing_pais"),
@@ -606,70 +729,9 @@ export default class Checkout {
                     $("#additional_want_electronic_invoice").prop("checked", false);
                     $("#additional_different_billing_address").prop("checked", false);
 
-                    differentBillingAddress = false;
+                    self.differentBillingAddress = false;
                 }
             });
-
-            function differentBillingAddressSetupForm() {
-                if ($("#billing_country").attr("type") == "hidden") {
-                    $yvDifShippingPais.val(
-                        $("#billing_country_field")
-                            .find(".woocommerce-input-wrapper strong")
-                            .text()
-                    );
-                } else {
-                    $yvDifShippingPais.replaceWith(
-                        '<select id="' + $yvDifShippingPais.attr("id") + '">'
-                    );
-                    $yvDifShippingPais = $("#yv_dif_billing_pais");
-
-                    bindChangeOnDifPais();
-
-                    $yvDifShippingPais.html("");
-
-                    $("#billing_country option").each(function () {
-                        $yvDifShippingPais.append($(this).clone());
-                    });
-
-                    if ($("#billing_country").val() != "") {
-                        $yvDifShippingPais.val($("#billing_country").val());
-                    } else {
-                        $yvDifShippingPais.find("option").eq(0).attr("selected", "selected");
-                    }
-                }
-
-                changeTagForDifCanton();
-
-                // shipping state
-                $yvDifShippingProvincia.html("");
-
-                $("#billing_state option").each(function () {
-                    $yvDifShippingProvincia.append($(this).clone());
-                });
-
-                if ($("#billing_state").val() != "") {
-                    $yvDifShippingProvincia.val($("#billing_state").val());
-                } else {
-                    $yvDifShippingProvincia.find("option").eq(0).attr("selected", "selected");
-                }
-                // shipping state end
-
-                // shipping town select
-                setTimeout(function () {
-                    $yvDifShippingCanton.html("");
-
-                    $("#billing_city option").each(function () {
-                        $yvDifShippingCanton.append($(this).clone());
-                    });
-
-                    if ($("#billing_city").val() != "") {
-                        $yvDifShippingCanton.val($("#billing_city").val());
-                    } else {
-                        $yvDifShippingCanton.find("option").eq(0).attr("selected", "selected");
-                    }
-                }, 1);
-                // shipping town end
-            }
 
             $(".step-content-payment-electronic-facture-another-label").on(
                 "click",
@@ -681,9 +743,9 @@ export default class Checkout {
 
                         $("#additional_different_billing_address").prop("checked", true);
 
-                        differentBillingAddress = true;
+                        self.differentBillingAddress = true;
 
-                        differentBillingAddressSetupForm();
+                        setupBillingAddressForm();
                     } else {
                         $(
                             ".step-content-payment-electronic-facture-another-form-holder"
@@ -691,69 +753,12 @@ export default class Checkout {
 
                         $("#additional_different_billing_address").prop("checked", false);
 
-                        differentBillingAddress = false;
+                        self.differentBillingAddress = false;
                     }
                 }
             );
 
-            function bindChangeOnDifPais() {
-                $yvDifShippingPais.bind("input propertychange", function () {
-                    $("#billing_country").val($yvDifShippingPais.val());
-
-                    $("#billing_country").trigger("change");
-
-                    // fill custom select
-                    $yvDifShippingProvincia.html("");
-
-                    $("#billing_state option").each(function () {
-                        $yvDifShippingProvincia.append($(this).clone());
-                    });
-
-                    if ($("#billing_state").val() != "") {
-                        $yvDifShippingProvincia.val($("#billing_state").val());
-                    } else {
-                        $yvDifShippingProvincia
-                            .find("option")
-                            .eq(0)
-                            .attr("selected", "selected");
-                    }
-                    // fill custom select end
-
-                    changeTagForDifCanton();
-                });
-            }
-
             bindChangeOnDifPais();
-
-            function changeTagForDifCanton() {
-                if ($("#billing_city").parent().find("select")[0]) {
-                    $yvDifShippingCanton.replaceWith(
-                        '<select id="' + $yvDifShippingCanton.attr("id") + '">'
-                    );
-                    $yvDifShippingCanton = $("#yv_dif_billing_canton");
-
-                    bingChangeOnDifCanton();
-
-                    $yvDifShippingCanton.html("");
-
-                    $("#billing_city option").each(function () {
-                        $yvDifShippingCanton.append($(this).clone());
-                    });
-
-                    if ($("#billing_city").val() != "") {
-                        $yvDifShippingCanton.val($("#billilng_city").val());
-                    } else {
-                        $yvDifShippingCanton.find("option").eq(0).attr("selected", "selected");
-                    }
-                } else {
-                    $yvDifShippingCanton.replaceWith(
-                        '<input id="' + $yvDifShippingCanton.attr("id") + '">'
-                    );
-                    $yvDifShippingCanton = $("#yv_dif_billing_canton");
-
-                    bingChangeOnDifCanton();
-                }
-            }
 
             $yvDifShippingProvincia.bind("input propertychange", function () {
                 $("#billing_state").val($yvDifShippingProvincia.val());
@@ -764,16 +769,6 @@ export default class Checkout {
                 changeTagForDifCanton();
                 // fill custom select end
             });
-
-            function bingChangeOnDifCanton() {
-                $yvDifShippingCanton.bind("input propertychange", function () {
-                    $("#billing_city").val($yvDifShippingCanton.val());
-
-                    $("#billing_city").trigger("change");
-
-                    $yvDifShippingPostal.val($("#billing_postcode").val());
-                });
-            }
 
             bingChangeOnDifCanton();
 
@@ -906,10 +901,7 @@ export default class Checkout {
             // STEP 3 END
 
             // PAYMENT POSITION
-            var paymentMethodHTML = `
-		<div class="yv-wc_payment_method-inner">
-		</div>
-	`;
+            var paymentMethodHTML = `<div class="yv-wc_payment_method-inner"></div>`;
             setInterval(function () {
                 // payment
                 var $payment = $("#payment"),
@@ -1084,36 +1076,20 @@ export default class Checkout {
                 } else {
                     $("#yv_discount").text(0);
                 }
-
-                // THIS ONE FOR ADDING TAX TO TOTAL FOR SPECIAL WOO SETTING
-                // if ($('#yv_taxes').text() == 0) {
-                // 	$('#yv_total').text($('.order-total bdi').text());
-                // } else {
-                // 	var str_1 = $('.order-total bdi').text();
-                // 	var res_1 = parseInt(str_1.replace(/\D/g, ""));
-                // 	var str_2 = $('#yv_taxes').text();
-                // 	var res_2 = parseInt(str_2.replace(/\D/g, ""));
-                // 	var result = res_1 + res_2;
-
-                // 	$('#yv_total').text($('.order-total .woocommerce-Price-currencySymbol').eq(0).text() + ' ' + result.toLocaleString("en-US"));
-                // }
-                // THIS ONE FOR ADDING TAX TO TOTAL FOR SPECIAL WOO SETTING END
-
                 $("#yv_total").text($(".order-total bdi").text());
             }, 1000);
             // REVIEW ORDER END
         }
 
-        if ($(".woocommerce-order-received")[0]) {
+        if (orderReceived[0]) {
             $("footer").hide();
 
             $("section.type-custom-checkout .step-item").addClass("active completed");
 
-            let $registerButton = $("#yv_register_after_checkout");
-
-            $registerButton.attr("href", $(".woocommerce-info a.button").attr("href"));
-
-            if (!$(".woocommerce-info a.button")[0]) {
+            let $registerButton = $("#yv_register_after_checkout"),
+                buttonInfo = $(".woocommerce-info a.button");
+            $registerButton.attr("href", buttonInfo.attr("href"));
+            if (!buttonInfo[0]) {
                 $registerButton.hide();
             }
 
