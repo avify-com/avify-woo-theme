@@ -601,8 +601,8 @@ li.current-menu-item {
   left: 0px;
   z-index: 95;
   transition: 0s !important;
-  background: black;
-  overflow: hidden;
+  //background: black;
+  //overflow: hidden;
   min-height: auto;
 }
 
@@ -1897,6 +1897,10 @@ body.product-template-default {
     > div {
       margin: 15px 15px;
     }
+}
+
+.avify-custom-options:empty {
+  display:none
 }
 
 @media screen and (max-width: 1366px) {
