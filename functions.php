@@ -30,14 +30,13 @@ add_shortcode('my_elementor_php_output', 'wpc_elementor_shortcode');
 function get_star_rating($atts)
 {
     global $woocommerce, $product;
-
-    $average = $product->get_average_rating();
-
-    if ($average == 0) {
-        $average = 5;
+    if ($product) {
+        $average = $product->get_average_rating();
+        if ($average == 0) {
+            $average = 5;
+        }
+        print_r($average);
     }
-
-    print_r($average);
 }
 
 add_shortcode('get_star_rating_php_output', 'get_star_rating');
