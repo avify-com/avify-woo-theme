@@ -23,8 +23,8 @@
             --color-accent-2: #00543B;
         }
     </style>
-    <link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/avify.css?v=2.0.4">
-    <script type="module" src="<?php bloginfo('template_url'); ?>/assets/avify.js?v=2.0.4"></script>
+    <link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/avify.css?v=2.0.5">
+    <script type="module" src="<?php bloginfo('template_url'); ?>/assets/avify.js?v=2.0.5"></script>
     <title></title>
 </head>
 
