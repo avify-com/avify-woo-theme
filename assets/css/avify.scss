@@ -1886,6 +1886,17 @@ body.product-template-default {
   }
 }
 
+.elementor-add-to-cart.elementor-product-simple .quantity.buttons_added,
+.woocommerce-variation-add-to-cart .quantity.buttons_added {
+  input[type="hidden"] + input,
+  input:has(+ label + input[type="hidden"]),
+  input:has(+ input[type="hidden"]),
+  &:has(input[type="hidden"])
+  {
+    display: none;
+  }
+}
+
 .elementor-add-to-cart.elementor-product-simple > form .avify-custom-options,
 .woocommerce-variation-add-to-cart .avify-custom-options {
     margin-bottom: 30px;
@@ -2034,53 +2045,43 @@ body.product-template-default {
   }
 }
 
+@mixin atcStyles() {
+  justify-content: space-between;
+  flex-wrap: wrap !important;
+
+  .avify-custom-options {
+    margin-bottom: 30px;
+    flex-basis: 100%;
+    max-width: 100%;
+    font-size: 15px;
+  }
+
+  > div.quantity,
+  > button {
+    flex-basis: calc(50% - 12px) !important;
+    max-width: calc(50% - 12px) !important;
+  }
+
+  > div.quantity {
+    > input {
+      flex-basis: 33% !important;
+      max-width: 33% !important;
+    }
+  }
+
+  > button:hover {
+    opacity: 0.5;
+  }
+}
+
 @media screen and (min-width: 767px) {
   .elementor-add-to-cart.elementor-product-simple {
     > form {
-      justify-content: space-between;
-      flex-wrap: wrap !important;
-
-      .avify-custom-options {
-        margin-bottom: 30px;
-        flex-basis: 100%;
-        max-width: 100%;
-        font-size: 15px;
-      }
-
-      > button {
-        flex-basis: 48% !important;
-        max-width: 48% !important;
-      }
-
-      > div {
-        &:not(.avify-custom-options) {
-          flex-basis: 48% !important;
-          max-width: 150px;
-        }
-      }
+      @include atcStyles;
     }
   }
+
   .woocommerce-variation-add-to-cart {
-    justify-content: space-between;
-    flex-wrap: wrap !important;
-
-    .avify-custom-options {
-      margin-bottom: 30px;
-      flex-basis: 100%;
-      max-width: 100%;
-      font-size: 15px;
-    }
-
-    > button {
-      flex-basis: 48% !important;
-      max-width: 48% !important;
-    }
-
-    > div {
-      &:not(.avify-custom-options) {
-        flex-basis: 48% !important;
-        max-width: 150px;
-      }
-    }
+    @include atcStyles;
   }
 }
