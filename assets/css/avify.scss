@@ -2043,6 +2043,13 @@ body.product-template-default {
       padding-left: initial;
     }
   }
+
+  body.woocommerce-shop {
+    ul li.product-category.product {
+      //border: red solid 1px;
+      margin: 0;
+    }
+  }
 }
 
 @mixin atcStyles() {
