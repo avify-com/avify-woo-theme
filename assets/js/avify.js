@@ -6,7 +6,5 @@ import Animations from "./components/animations";
         new Checkout();
 
         new Animations();
-
-        alert('hola mundo!');
     });
 })();
