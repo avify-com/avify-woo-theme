@@ -1,7 +1,7 @@
 <?php
-    function yvCustomCheckout($atts) {
+    function yvCustomCheckout() {
         ?>
-        	<section class="type-original-checkout">
+        	<section class="type-woo-checkout">
         	    <div class="wrapper">
         	        <div class="content">
         	            <?= do_shortcode('[woocommerce_checkout]'); ?>
@@ -9,7 +9,7 @@
         	    </div>
         	</section>
 
-        	<section class="type-custom-checkout">
+        	<section class="type-avify-checkout">
         		<div class="wrapper">
         			<div class="content">
         				<div class="step-list">
@@ -83,7 +83,7 @@
                                                         </div>
 
         												<div class="g__form-input-inner">
-        													<input type="text" id="yv_billing_name">
+        													<input type="text" id="avf_billing_name" />
         												</div>
         											</div>
         										</div>
@@ -95,7 +95,7 @@
 		                                                </div>
 
 														<div class="g__form-input-inner">
-															<input type="text" id="yv_billing_email">
+															<input type="text" id="avf_billing_email">
 														</div>
 													</div>
 												</div>
@@ -107,7 +107,7 @@
 		                                                </div>
 
 														<div class="g__form-input-inner">
-															<input type="text" id="yv_billing_tel">
+															<input type="text" id="avf_billing_tel">
 														</div>
 													</div>
 												</div>
@@ -115,7 +115,7 @@
         								</div>
 
         								<div class="step-content-next-step-button">
-        									<div class="g__button type-1 var-disabled" id="yv_to_second_step_button">
+        									<div class="g__button type-1 var-disabled" id="avf_to_second_step_button">
         										<div class="g__button-inner">
         											<div class="g__button-frame"></div>
 
@@ -136,10 +136,10 @@
 
         								<div class="step-content-live-divider"></div>
 
-        								<div class="step-content-shipping-method-list flex" id="yv_shipping_or_pick">
+        								<div class="step-content-shipping-method-list flex" id="avf_shipping_or_pick">
         									<div class="step-content-shipping-method-item">
         										<label class="step-content-shipping-method-item-label">
-        											<input type="radio" name="yv_shipping_method" value="1" id="yv_shipping_or_pick_1" checked>
+        											<input type="radio" name="avf_shipping_method" value="1" id="avf_shipping_or_pick_1" checked>
 
         											<div class="step-content-shipping-method-item-radio"></div>
 
@@ -153,7 +153,7 @@
 
         									<div class="step-content-shipping-method-item">
         										<label class="step-content-shipping-method-item-label">
-        											<input type="radio" name="yv_shipping_method" value="2" id="yv_shipping_or_pick_2">
+        											<input type="radio" name="avf_shipping_method" value="2" id="avf_shipping_or_pick_2">
 
         											<div class="step-content-shipping-method-item-radio"></div>
 
@@ -177,43 +177,53 @@
 		                                                        </div>
 
 		        												<div class="g__form-input-inner">
-		        													<input type="text" id="yv_billing_pais" value="" readonly="">
+		        													<input type="text" id="avf_billing_country" value="" readonly="">
 		        												</div>
 		        											</div>
 		        										</div>
 
 		        										<div class="g__form-row g__form-row-1-of-2">
 		        											<div class="g__form-input">
-		        											    <div class="g__form-input-label" data-text="<?php _e('Provincia', 'Avify'); ?>" data-mexico-text="<?php _e('Estado', 'Avify'); ?>">
+		        											    <div class="g__form-input-label"
+                                                                     data-text="<?php _e('Provincia', 'Avify'); ?>"
+                                                                     data-mx-text="<?php _e('Estado', 'Avify'); ?>"
+                                                                >
 		        											    	<b><?php _e('Provincia', 'Avify'); ?></b> <span>*</span>
 		        											    </div>
 
 		        												<div class="g__form-input-inner">
-		        													<select id="yv_billing_provincia">
+		        													<select id="avf_billing_provincia">
 		        														
 		        													</select>
 		        												</div>
 		        											</div>
 
 		        											<div class="g__form-input">
-		        											    <div class="g__form-input-label" data-text="<?php _e('Cantón', 'Avify'); ?>" data-mexico-text="<?php _e('Ciudad', 'Avify'); ?>" data-costa-rica-text="<?php _e('Cantón - Distrito', 'Avify'); ?>">
+		        											    <div class="g__form-input-label"
+                                                                     data-text="<?php _e('Cantón', 'Avify'); ?>"
+                                                                     data-mx-text="<?php _e('Ciudad', 'Avify'); ?>"
+                                                                     data-cr-text="<?php _e('Cantón - Distrito', 'Avify'); ?>"
+                                                                >
 		        											    	<b><?php _e('Cantón', 'Avify'); ?></b> <span>*</span>
 		        											    </div>
 
 		        												<div class="g__form-input-inner">
-                                                                    <select id="yv_billing_canton"></select>
+                                                                    <select id="avf_billing_city"></select>
 		        												</div>
 		        											</div>
 		        										</div>
 
-		        										<div class="g__form-row g__form-row-1-of-2" id="yv_distrito_and_postal_row">
+		        										<div class="g__form-row g__form-row-1-of-2" id="avf_district_and_postal_row">
 		        											<div class="g__form-input">
-		        											    <div class="g__form-input-label" data-text="<?php _e('Distrito', 'Avify'); ?>" data-mexico-text="<?php _e('Colonia', 'Avify'); ?>">
+		        											    <div class="g__form-input-label"
+                                                                     data-text="<?php _e('Distrito', 'Avify'); ?>"
+                                                                     data-mx-text="<?php _e('Colonia', 'Avify'); ?>"
+                                                                >
 		        											    	<b><?php _e('Distrito', 'Avify'); ?></b> <span>*</span>
 		        											    </div>
 
 		        												<div class="g__form-input-inner">
-		        													<input type="text" id="yv_billing_distrito">
+		        													<input type="text" id="avf_billing_distrito">
 		        												</div>
 		        											</div>
 
@@ -223,7 +233,7 @@
 		        											    </div>
 
 		        												<div class="g__form-input-inner">
-		        													<input type="text" id="yv_billing_postal">
+		        													<input type="text" id="avf_billing_postal">
 		        												</div>
 		        											</div>
 		        										</div>
@@ -235,7 +245,7 @@
 				                                                </div>
 
 																<div class="g__form-input-inner">
-																	<textarea id="yv_billing_exacta"></textarea>
+																	<textarea id="avf_billing_exacta"></textarea>
 																</div>
 															</div>
 														</div>
@@ -255,7 +265,7 @@
 		        										</div>
 		        									</div>
 
-		        									<div class="step-content-map-container" id="yv_map">
+		        									<div class="step-content-map-container" id="avf_map">
 		        										<!-- place for google map -->
 		        									</div>
 
@@ -266,11 +276,11 @@
 		        									</div>
 		        								</div>
 
-		        								<div class="step-content-shipping-var-list" id="yv_shipping_method">
+		        								<div class="step-content-shipping-var-list" id="avf_shipping_methods">
 		        									<div class="step-content-shipping-var-item">
 		        										<label class="step-content-shipping-var-item-label">
 		        											<div class="step-content-shipping-var-item-part-1">
-		        												<input type="radio" name="yv_shipping_method_var" value="1">
+		        												<input type="radio" name="avf_shipping_method_var" value="1">
 
 		        												<div class="step-content-shipping-var-item-radio"></div>
 
@@ -292,7 +302,7 @@
 		        									</div>
 		        								</div>
 
-                                                <div class="step-content-shipping-var-loader" id="yv_shipping_method_loader">
+                                                <div class="step-content-shipping-var-loader" id="avf_shipping_methods_loader">
                                                     <div class="g__image">
                                                         <img src="<?php bloginfo('template_url'); ?>/assets/img/loading.gif" alt="">
                                                     </div>
@@ -306,16 +316,12 @@
         											</div>
         										</div>
 
-        										<div class="step-content-self-pickup-info">
-        											<div class="g__text type-6">
-        												<?= get_field('checkout_local_pickup_info', 'option'); ?>
-        											</div>
-        										</div>
+        										<div class="step-content-self-pickup-info"></div>
         									</div>
         								</div>
 
         								<div class="step-content-next-step-button">
-        									<div class="g__button type-1 var-disabled" id="yv_to_third_step_button">
+        									<div class="g__button type-1 var-disabled" id="avf_to_third_step_button">
         										<div class="g__button-inner">
         											<div class="g__button-frame"></div>
 
@@ -336,131 +342,13 @@
 
         								<div class="step-content-live-divider"></div>
 
-        								<div class="step-content-payment-var-tab-list var-disabled">
-        									<div class="step-content-payment-var-tab-item">
-        										<label class="step-content-payment-var-tab-item-label">
-        											<div class="step-content-payment-var-tab-item-part-1">
-        												<input type="radio" name="yv_payment_method_var" value="1">
-
-        												<div class="step-content-payment-var-tab-item-radio"></div>
-
-        												<div class="step-content-payment-var-tab-item-text">
-        													<div class="g__text type-7">
-        														<?php _e('Tarjeta de Crédito/Débito', 'Avify'); ?>
-        													</div>
-        												</div>
-        											</div>
-
-        											<div class="step-content-payment-var-tab-item-part-2">
-        												<div class="step-content-payment-var-tab-item-image">
-        													<div class="g__image">
-        														<img src="<?php bloginfo('template_url'); ?>/assets/img/payment.png" alt="">
-        													</div>
-        												</div>
-        											</div>
-        										</label>
-
-        										<div class="step-content-payment-var-tab-item-content">
-													<div class="step-content-card-details-form">
-			        									<div class="g__form">
-			        										<div class="g__form-row">
-			        											<div class="g__form-input">
-			                                                        <div class="g__form-input-label">
-			                                                        	<?php _e('Nombre', 'Avify'); ?> <span>*</span>
-			                                                        </div>
-
-			        												<div class="g__form-input-inner">
-			        													<input type="text" id="yv_payment_card_name">
-			        												</div>
-			        											</div>
-			        										</div>
-
-															<div class="g__form-row">
-																<div class="g__form-input">
-					                                                <div class="g__form-input-label">
-					                                                	<?php _e('Número de tarjeta', 'Avify'); ?> <span>*</span>
-					                                                </div>
-
-																	<div class="g__form-input-inner">
-																		<input type="text" id="yv_payment_card_number">
-																	</div>
-																</div>
-															</div>
-
-															<div class="g__form-row g__form-row-1-of-2">
-																<div class="g__form-input">
-					                                                <div class="g__form-input-label">
-					                                                	<?php _e('Fecha de expiración', 'Avify'); ?> <span>*</span>
-					                                                </div>
-
-																	<div class="g__form-input-inner">
-																		<input type="text" id="yv_payment_card_date">
-																	</div>
-																</div>
-
-																<div class="g__form-input">
-					                                                <div class="g__form-input-label">
-					                                                	<?php _e('Código de verificación', 'Avify'); ?> <span>*</span>
-					                                                </div>
-
-																	<div class="g__form-input-inner">
-																		<input type="text" id="yv_payment_card_cvv">
-																	</div>
-																</div>
-															</div>
-			        									</div>
-			        								</div>
-        										</div>
-        									</div>
-
-        									<div class="step-content-payment-var-tab-item">
-        										<label class="step-content-payment-var-tab-item-label">
-        											<div class="step-content-payment-var-tab-item-part-1">
-        												<input type="radio" name="yv_payment_method_var" value="2">
-
-        												<div class="step-content-payment-var-tab-item-radio"></div>
-
-        												<div class="step-content-payment-var-tab-item-text">
-        													<div class="g__text type-7">
-        														<?php _e('Transferencia Bancaria / SPEI / SINPE', 'Avify'); ?>
-        													</div>
-        												</div>
-        											</div>
-
-        											<div class="step-content-payment-var-tab-item-part-2">
-        												
-        											</div>
-        										</label>
-
-        										<div class="step-content-payment-var-tab-item-content">
-        											<div class="step-content-payment-var-bank-transfer">
-		        										<div class="step-content-payment-var-bank-transfer-text">
-		        											<div class="g__text type-8">
-		        												<?php _e('Información de pago', 'Avify'); ?>
-		        											</div>
-		        										</div>
-
-		        										<div class="step-content-payment-var-bank-transfer-info">
-		        											<div class="g__text type-6">
-		        												<?= get_field('checkout_cheque_info', 'option'); ?>
-		        											</div>
-		        										</div>
-		        									</div>
-
-		        									<div class="step-content-payment-var-bank-transfer-file">
-		        										<!-- here should be file upload for bank transfer -->
-		        									</div>
-        										</div>
-        									</div>
-        								</div>
-
                                         <div class="step-content-payment-container-for-woo">
                                             <!-- here goes payments from woo -->
                                         </div>
 
         								<div class="step-content-payment-electronic-facture">
         									<label class="step-content-payment-electronic-facture-label">
-        										<input type="checkbox" id="yv_want_electronic_invoice">
+        										<input type="checkbox" id="avf_want_electronic_invoice">
 
         										<div class="step-content-payment-electronic-facture-custom-checkbox">
         											<div class="step-content-payment-electronic-facture-custom-checkbox-checked-icon">
@@ -478,7 +366,7 @@
         									</label>
         								</div>
 
-        								<div class="step-contentelectronic-facture-content-holder">
+        								<div class="step-content-electronic-facture-content-holder">
 	        								<div class="step-contentelectronic-facture-form-container">
 												<div class="step-contentelectronic-facture-form">
 		        									<div class="g__form">
@@ -489,7 +377,7 @@
 				                                                </div>
 
 																<div class="g__form-input-inner">
-																	<select id="yv_additional_identification_type">
+																	<select id="avf_additional_identification_type">
 																		
 																	</select>
 																</div>
@@ -501,7 +389,7 @@
 				                                                </div>
 
 																<div class="g__form-input-inner">
-																	<input type="text" id="yv_additional_identification_number">
+																	<input type="text" id="avf_additional_identification_number">
 																</div>
 															</div>
 														</div>
@@ -517,7 +405,7 @@
 	    										</div>
 
 	    										<div class="step-contentelectronic-facture-info-info">
-	    											<div class="g__text type-6" id="yv_identification_default_info">
+	    											<div class="g__text type-6" id="avf_identification_default_info">
 	    												
 	    											</div>
 	    										</div>
@@ -525,7 +413,7 @@
 
 	    									<div class="step-content-payment-electronic-facture-another">
 	    										<label class="step-content-payment-electronic-facture-another-label">
-	    											<input type="checkbox" id="yv_additional_different_billing_address">
+	    											<input type="checkbox" id="avf_additional_different_billing_address">
 
 	    											<div class="step-content-payment-electronic-facture-another-custom-checkbox">
 	    												<div class="step-content-payment-electronic-facture-another-custom-checkbox-checked-icon">
@@ -553,43 +441,53 @@
                                                                 </div>
 
                                                                 <div class="g__form-input-inner">
-                                                                    <input type="text" id="yv_dif_billing_pais" value="" readonly="">
+                                                                    <input type="text" id="avf_dif_billing_pais" value="" readonly="">
                                                                 </div>
                                                             </div>
                                                         </div>
 
                                                         <div class="g__form-row g__form-row-1-of-2">
                                                             <div class="g__form-input">
-                                                                <div class="g__form-input-label" data-text="<?php _e('Provincia', 'Avify'); ?>" data-mexico-text="<?php _e('Estado', 'Avify'); ?>">
+                                                                <div class="g__form-input-label"
+                                                                     data-text="<?php _e('Provincia', 'Avify'); ?>"
+                                                                     data-mx-text="<?php _e('Estado', 'Avify'); ?>"
+                                                                >
                                                                     <b><?php _e('Provincia', 'Avify'); ?></b> <span>*</span>
                                                                 </div>
 
                                                                 <div class="g__form-input-inner">
-                                                                    <select id="yv_dif_billing_provincia">
+                                                                    <select id="avf_dif_billing_provincia">
                                                                         
                                                                     </select>
                                                                 </div>
                                                             </div>
 
                                                             <div class="g__form-input">
-                                                                <div class="g__form-input-label" data-text="<?php _e('Cantón', 'Avify'); ?>" data-mexico-text="<?php _e('Ciudad', 'Avify'); ?>" data-costa-rica-text="<?php _e('Cantón - Distrito', 'Avify'); ?>">
+                                                                <div class="g__form-input-label"
+                                                                     data-text="<?php _e('Cantón', 'Avify'); ?>"
+                                                                     data-mx-text="<?php _e('Ciudad', 'Avify'); ?>"
+                                                                     data-cr-text="<?php _e('Cantón - Distrito', 'Avify'); ?>"
+                                                                >
                                                                     <b><?php _e('Cantón', 'Avify'); ?></b> <span>*</span>
                                                                 </div>
 
                                                                 <div class="g__form-input-inner">
-                                                                    <select id="yv_dif_billing_canton"></select>
+                                                                    <select id="avf_dif_billing_canton"></select>
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        <div class="g__form-row g__form-row-1-of-2" id="yv_dif_distrito_and_postal_row">
+                                                        <div class="g__form-row g__form-row-1-of-2" id="avf_dif_district_and_postal_row">
                                                             <div class="g__form-input">
-                                                                <div class="g__form-input-label" data-text="<?php _e('Distrito', 'Avify'); ?>" data-mexico-text="<?php _e('Colonia', 'Avify'); ?>">
+                                                                <div class="g__form-input-label"
+                                                                     data-text="<?php _e('Distrito', 'Avify'); ?>"
+                                                                     data-mx-text="<?php _e('Colonia', 'Avify'); ?>"
+                                                                >
                                                                     <b><?php _e('Distrito', 'Avify'); ?></b> <span>*</span>
                                                                 </div>
 
                                                                 <div class="g__form-input-inner">
-                                                                    <input type="text" id="yv_dif_billing_distrito">
+                                                                    <input type="text" id="avf_dif_billing_distrito">
                                                                 </div>
                                                             </div>
 
@@ -599,7 +497,7 @@
                                                                 </div>
 
                                                                 <div class="g__form-input-inner">
-                                                                    <input type="text" id="yv_dif_billing_postal">
+                                                                    <input type="text" id="avf_dif_billing_postal">
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -611,7 +509,7 @@
                                                                 </div>
 
                                                                 <div class="g__form-input-inner">
-                                                                    <textarea id="yv_dif_billing_exacta"></textarea>
+                                                                    <textarea id="avf_dif_billing_exacta"></textarea>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -621,7 +519,7 @@
         								</div>
 
         								<div class="step-content-next-step-button">
-        									<div class="g__button type-1" id="yv_checkout_button">
+        									<div class="g__button type-1" id="avf_checkout_button">
         										<div class="g__button-inner">
         											<div class="g__button-frame"></div>
 
@@ -686,7 +584,7 @@
         									</div>
 
         									<div class="review-order-total-right-part">
-        										<div class="g__text type-7" id="yv_subtotal">
+        										<div class="g__text type-7" id="avf_subtotal">
         											0
         										</div>
         									</div>
@@ -700,7 +598,7 @@
         									</div>
 
         									<div class="review-order-total-right-part">
-        										<div class="g__text type-10" id="yv_shipping_cost">
+        										<div class="g__text type-10" id="avf_shipping_cost">
         											0
         										</div>
         									</div>
@@ -714,7 +612,7 @@
         									</div>
 
         									<div class="review-order-total-right-part">
-        										<div class="g__text type-10" id="yv_discount">
+        										<div class="g__text type-10" id="avf_discount">
         											0
         										</div>
         									</div>
@@ -728,7 +626,7 @@
         									</div>
 
         									<div class="review-order-total-right-part">
-        										<div class="g__text type-10" id="yv_taxes">
+        										<div class="g__text type-10" id="avf_taxes">
         											0
         										</div>
         									</div>
@@ -742,7 +640,7 @@
         									</div>
 
         									<div class="review-order-total-right-part">
-        										<div class="g__text type-4" id="yv_total">
+        										<div class="g__text type-4" id="avf_total">
         											0
         										</div>
         									</div>
@@ -777,13 +675,7 @@
         		</div>
         	</section>
 
-            <div class="checkout-end-loader" id="yv_checkout_end_loader">
-                <div class="g__image">
-                    <img src="<?php bloginfo('template_url'); ?>/assets/img/loading.gif" alt="">
-                </div>
-            </div>
-
-        	<section class="type-custom-order-received">
+        	<section class="type-avify-success">
         		<div class="wrapper">
         			<div class="content">
         				<div class="el-icon">
@@ -812,7 +704,7 @@
         					<div class="g__text type-12">
         						<?php _e('Su orden ha sido tramitada de forma exitosa
         						Hemos enviado un correo con la confirmación de su pedido', 'Avify'); ?>
-        						<span id="yv_order_number">#0000</span>
+        						<span id="avf_order_number">#0000</span>
         					</div>
         				</div>
 
@@ -829,7 +721,7 @@
         				</div>
 
         				<div class="el-button-2">
-        					<a class="g__button type-1 var-a" id="yv_register_after_checkout" href="#">
+        					<a class="g__button type-1 var-a" id="avf_register_after_checkout" href="#">
 								<div class="g__button-inner">
 									<div class="g__button-frame"></div>
 
@@ -866,16 +758,33 @@
         			</div>
         		</div>
         	</section>
+
+            <div class="avf-checkout-loader">
+                <div class="g__image">
+                    <img src="<?php bloginfo('template_url'); ?>/assets/img/loading.gif" alt="">
+                </div>
+            </div>
+
             <script>
-            	var hideLocalPickUp = false;
+            	let avfHidePickUp,
+                    avfAttachmentOptional;
             	<?php
             		if (get_field('checkout_hide_local_pickup', 'option') != '') {
             			?>
-            				hideLocalPickUp = true;
+            				avfHidePickUp = true;
             			<?php
             		} else {
             			?>
-            				hideLocalPickUp = false;
+            				avfHidePickUp = false;
+            			<?php
+            		}
+                    if (get_field('checkout_attachment_optional', 'option') != '') {
+            			?>
+                            avfAttachmentOptional = true;
+            			<?php
+            		} else {
+            			?>
+                            avfAttachmentOptional = false;
             			<?php
             		}
             	?>

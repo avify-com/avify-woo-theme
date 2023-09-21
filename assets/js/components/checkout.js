@@ -1,9 +1,91 @@
 export default class Checkout {
     constructor() {
-        self.differentBillingAddress = false;
-        self.mapClicked = false;
         this.init();
     }
+
+    init() {
+        const self = this;
+
+        self.body = $("body");
+        self.currentStep = 1;
+
+        // avify custom fields
+        self.differentBillingAddress = false;
+        self.avfBillingName = $("#avf_billing_name");
+        self.avfBillingEmail = $("#avf_billing_email");
+        self.avfBillingPhone = $("#avf_billing_tel");
+        self.avfBillingCountry = $("#avf_billing_country");
+        self.avfBillingState = $("#avf_billing_provincia");
+        self.avfBillingCity = $("#avf_billing_city");
+        self.avfBillingDistrict = $("#avf_billing_distrito");
+        self.avfBillingZip = $("#avf_billing_postal");
+        self.avfBillingAddress = $("#avf_billing_exacta");
+        self.fileUploader = $("#alg_checkout_files_upload_form_1");
+        //--
+        self.avfSecondStep = $("#avf_to_second_step_button");
+        self.avfThirdStep = $("#avf_to_third_step_button");
+        self.avfShipOrPick = $("#avf_shipping_or_pick");
+        self.avfIsPickUp = false;
+        //--
+        self.avfShippingMap = $("#avf_map");
+        self.avfShippingMethods = $("#avf_shipping_methods");
+        self.avfShippingLoader = $("#avf_shipping_methods_loader");
+        self.avfShippingMethodsHTML = $("#avf_shipping_methods .step-content-shipping-var-item").addClass("avf-new-method").parent().html()
+        //--
+        self.avfDifBillingCountry = $("#avf_dif_billing_pais");
+        self.avfDifBillingState = $("#avf_dif_billing_provincia");
+        self.avfDifBillingCity = $("#avf_dif_billing_canton");
+        self.avfDifBillingDistrict = $("#avf_dif_billing_distrito");
+        self.avfDifBillingZip = $("#avf_dif_billing_postal");
+        self.avfDifBillingAddress = $("#avf_dif_billing_exacta");
+        self.avfPlaceOrder = $("#avf_checkout_button");
+        self.avfCheckoutLoader = $(".avf-checkout-loader");
+
+        // woocommerce core fields
+        self.wooShippingCountry = $("#shipping_country");
+        self.wooShippingName = $("#shipping_first_name");
+        self.wooShippingState = $("#shipping_state");
+        self.wooShippingCity = $("#shipping_city");
+        self.wooShippingZip = $("#shipping_postcode");
+        self.wooShippingAddress1 = $("#shipping_address_1");
+        self.wooShippingExactDirection = $("#shipping_exact_direction");
+        //--
+        self.wooBillingEmail = $("#billing_email");
+        self.wooBillingPhone = $("#billing_phone");
+        self.wooBillingName = $("#billing_first_name");
+        self.wooBillingCountry = $("#billing_country");
+        self.wooBillingCity = $("#billing_city");
+        self.wooBillingState = $("#billing_state");
+        self.wooBillingZip = $("#billing_postcode");
+        self.wooBillingAddress1 = $("#billing_address_1");
+        self.wooBillingExactDirection = $("#billing_exact_direction");
+
+        if (
+            $("body.woocommerce-checkout").length &&
+            $(".type-avify-checkout").length &&
+            !$(".woocommerce-order-received").length
+        ) {
+            $(".yv-header-nav, .yv-header-search, .yv-header-cart, footer").hide();
+            self.initObserve();
+            self.initStep1();
+            self.initStep2();
+            self.initStep3();
+            self.executeObserve();
+        } else {
+            $("footer").hide();
+            $("section.type-avify-checkout .step-item").addClass("active completed");
+            let buttonInfo = $(".woocommerce-info a.button"),
+                avfRegisterButton = $("#avf_register_after_checkout")
+            if (!buttonInfo) {
+                avfRegisterButton.hide();
+            } else {
+                avfRegisterButton.attr("href", buttonInfo.attr("href"));
+            }
+            $("#avf_order_number").text("#" + $(".woocommerce-order-overview__order strong").text());
+        }
+    }
+
+    // --
 
     inputEmpty(inputs) {
         let success = true;
@@ -16,1274 +98,804 @@ export default class Checkout {
         return success;
     }
 
-    bindChangeOnPais() {
-        const self = this,
-            $yvShippingPais = $("#yv_billing_pais"),
-            $yvShippingCountry = $("#shipping_country"),
-            $yvBillingCountry = $("#billing_country"),
-            $yvShippingProvincia = $("#yv_billing_provincia");
-
-        $yvShippingPais.bind("input propertychange", function () {
-            self.checkIfCanOpenThirdStep();
-
-            $yvShippingCountry.val($yvShippingPais.val());
-            if (!self.differentBillingAddress) {
-                $yvBillingCountry.val($yvShippingPais.val());
-            }
-
-            $yvShippingCountry.trigger("change");
-            if (!self.differentBillingAddress) {
-                $yvBillingCountry.trigger("change");
-            }
-
-            $yvShippingProvincia.html("");
-            $("#shipping_state option").each(function () {
-                $yvShippingProvincia.append($(this).clone());
-            });
-            if (self.inputEmpty([$("#shipping_state")])) {
-                $yvShippingProvincia.val($("#shipping_state").val());
-            } else {
-                $yvShippingProvincia.find("option").eq(0).attr("selected", "selected");
-            }
-
-            self.changeTagForCanton();
+    completeAvfSelectorWithWooSelector(wooOptions, avfSelector, wooSelector) {
+        const self = this;
+        avfSelector.html("");
+        wooOptions.each(function () {
+            avfSelector.append($(this).clone());
         });
+        if (self.inputEmpty([wooSelector])) {
+            avfSelector.val(wooSelector.val());
+        } else {
+            avfSelector.find("option").eq(0).attr("selected", "selected");
+        }
     }
 
-    getShippingMethods() {
-        const self = this,
-            $yvShippingMethodList = $("#yv_shipping_method"),
-            yvShippingMethodItemHTML = $("#yv_shipping_method .step-content-shipping-var-item")
-                .addClass("yv-new").parent().html();
-
-        $("body").on("updated_checkout", function () {
-            const $shippingMethodItem = $("body").find("#shipping_method li");
-            $yvShippingMethodList.html("");
-            if ($shippingMethodItem[0]) {
-                $shippingMethodItem.each(function (i) {
-                    $yvShippingMethodList.append(yvShippingMethodItemHTML);
-                    if ($(self).find("input").is(":checked")) {
-                        $yvShippingMethodList
-                            .find(".yv-new")
-                            .find("input")
-                            .prop("checked", true);
-                    }
-                    $yvShippingMethodList
-                        .find(".yv-new")
-                        .attr("data-shipping-value", $(this).find("input").val());
-                    $yvShippingMethodList
-                        .find(".yv-new")
-                        .find(".step-content-shipping-var-item-text .g__text")
-                        .text($(this).find("label")[0].childNodes[0].nodeValue);
-                    $yvShippingMethodList
-                        .find(".yv-new")
-                        .find(".step-content-shipping-var-item-text-2 .g__text")
-                        .text($(this).find(".amount").text());
-                    $yvShippingMethodList.find(".yv-new").removeClass("yv-new");
-                });
-            } else {
-                $yvShippingMethodList.append(yvShippingMethodItemHTML);
-                $yvShippingMethodList
-                    .find(".yv-new")
-                    .find(".step-content-shipping-var-item-radio")
-                    .remove();
-                $yvShippingMethodList
-                    .find(".yv-new")
-                    .find(".step-content-shipping-var-item-text .g__text")
-                    .text($(".woocommerce-no-shipping-available-html").text());
-                $yvShippingMethodList
-                    .find(".yv-new")
-                    .find(".step-content-shipping-var-item-text-2 .g__text")
-                    .remove();
-                $yvShippingMethodList.find(".yv-new").removeClass("yv-new");
-            }
-
-            $yvShippingMethodList
-                .find(
-                    '.step-content-shipping-var-item[data-shipping-value="' +
-                    "avfdeliveries-instorepickup0" +
-                    '"]'
-                ).hide();
-
-            $yvShippingMethodList
-                .find(
-                    '.step-content-shipping-var-item[data-shipping-value="' +
-                    "avfdeliveries-instorepickup" +
-                    '"]'
-                ).hide();
-
-            $yvShippingMethodList
-                .find(
-                    '.step-content-shipping-var-item[data-shipping-value="' +
-                    "local_pickup:16" +
-                    '"]'
-                ).hide();
-
-            $yvShippingMethodList.show();
-            $yvShippingMethodLoader.hide();
-
-            clearTimeout(self.showShippingMethodsAnywayTimeout);
-        });
-    }
-
-    updateShippingMethods() {
-        const self = this,
-            $yvShippingMethodList = $("#yv_shipping_method"),
-            $yvShippingMethodLoader = $("#yv_shipping_method_loader");
-        $yvShippingMethodList.hide();
-        $yvShippingMethodLoader.show();
-
-        clearTimeout(self.showShippingMethodsAnywayTimeout);
-        self.showShippingMethodsAnywayTimeout = setTimeout(function () {
-            $yvShippingMethodList.show();
-            $yvShippingMethodLoader.hide();
-            self.checkIfCanOpenThirdStep(false);
-        }, 5000);
-    }
-
-    function fireKeydownEventOnElement($elem) {
+    fireKeydownEventOnElement($elem) {
         $elem.trigger("keydown");
     }
 
-    function checkIfCanOpenSecondStep = () => {
-        if ($yvName.val() != "" && $yvEmail.val() != "" && $yvTel.val() != "") {
-            $yvToSecondStepButton.removeClass("var-disabled");
-        } else {
-            $yvToSecondStepButton.addClass("var-disabled");
-        }
-    }
+    // --
 
-    function appendMap() {
-        var $mapOrig = $("#lpac-map-container"),
-            $mapPlace = $(".step-content-map-container");
-
-        $mapPlace.append($mapOrig);
-    }
-
-    function checkIfCanOpenThirdStep(updateShipping) {
-        console.log('checkIfCanOpenThirdStep');
-
-        $yvToThirdStepButton.addClass("var-disabled");
-
-        if (mapClicked && updateShipping) {
-            self.updateShippingMethods();
-        }
-
+    checkIfCanOpenSecondStep(){
+        const self = this;
         if (
-            $yvShippingPais.val() != "" &&
-            $yvShippingProvincia.val() != "" &&
-            $yvShippingCanton.val() != "" &&
-            $yvShippingDistrito.val() != "" &&
-            $yvShippingPostal.val() != "" &&
-            $yvShippingExacta.val() != ""
-        ) {
-            if (mapClicked) {
-                if ($("section.type-custom-checkout .step-content-shipping-var-item input").is(":checked")) {
-                    const isNotPickup =
-                        $("section.type-custom-checkout .step-content-shipping-var-item input:checked")
-                            .parents(".step-content-shipping-var-item")
-                            .index();
-                    if (hideLocalPickUp ||
-                        (isNotPickup !== 0 &&
-                            $("section.type-custom-checkout .step-content-shipping-var-item").length > 1)
-                    ) {
-                        if ($("#yv_shipping_method_loader")[0].offsetParent === null) {
-                            $yvToThirdStepButton.removeClass("var-disabled");
-                        }
+            self.avfBillingName.val() &&
+            self.avfBillingEmail.val() &&
+            self.avfBillingPhone.val()) {
+            self.avfSecondStep.removeClass("var-disabled");
+        } else {
+            self.avfSecondStep.addClass("var-disabled");
+        }
+    }
+
+    checkIfCanOpenThirdStep() {
+        const self = this;
+        self.avfThirdStep.addClass("var-disabled");
+        const selectedMethod = $('#shipping_method input:checked');
+        if (selectedMethod.length) {
+            if (self.avfIsPickUp) {
+                if (selectedMethod.val().startsWith('avfdeliveries-instorepickup')) {
+                    self.avfThirdStep.removeClass("var-disabled");
+                }
+            } else {
+                if (
+                    self.avfBillingCountry.val() &&
+                    self.avfBillingState.val() &&
+                    self.avfBillingCity.val() &&
+                    self.avfBillingDistrict.val() &&
+                    self.avfBillingZip.val() &&
+                    self.avfBillingAddress.val()
+                ) {
+                    if (!selectedMethod.val().startsWith('avfdeliveries-instorepickup')) {
+                        self.avfThirdStep.removeClass("var-disabled");
                     }
                 }
             }
         }
     }
 
-    function changeTagForCanton() {
-        if ($("#shipping_city").parent().find("select")[0]) {
-            $yvShippingCanton.replaceWith(
-                '<select id="' + $yvShippingCanton.attr("id") + '">'
-            );
-            $yvShippingCanton = $("#yv_billing_canton");
+    // --
 
-            self.bindChangeOnCanton();
-
-            $yvShippingCanton.html("");
-
-            $("#shipping_city option").each(function () {
-                $yvShippingCanton.append($(this).clone());
-            });
-
-            if ($("#shipping_city").val() != "") {
-                $yvShippingCanton.val($("#shipping_city").val());
+    shippingZonesLabels() {
+        const self = this;
+        const na = (a, b = true) => {
+            if (a.is(".g__form-row-1-of-2")) {
+                if (b) {
+                    a.removeClass("g__form-row-1-of-2");
+                    self.avfBillingDistrict.parents(".g__form-input").hide();
+                    self.avfBillingDistrict.val("N/A");
+                    self.avfBillingDistrict.trigger("input");
+                }
             } else {
-                $yvShippingCanton.find("option").eq(0).attr("selected", "selected");
+                if (!b) {
+                    a.addClass("g__form-row-1-of-2");
+                    self.avfBillingDistrict.parents(".g__form-input").show();
+                    self.avfBillingDistrict.val("");
+                }
             }
-        } else {
-            $yvShippingCanton.replaceWith(
-                '<input id="' + $yvShippingCanton.attr("id") + '">'
-            );
-            $yvShippingCanton = $("#yv_billing_canton");
+        }
+        const complete = (a, c) => {
+            a.parents(".g__form-input")
+                .find(".g__form-input-label b")
+                .text(a.parents(".g__form-input").find(".g__form-input-label").data(`${c}text`));
+        }
 
-            bindChangeOnCanton();
+        if (['CR', 'Costa Rica'].includes(self.avfBillingCountry.val())) {
+            na($("#avf_district_and_postal_row"));
+            na($("#avf_dif_district_and_postal_row"));
+            complete(self.avfBillingCity, 'cr-');
+            complete(self.avfDifBillingCity, 'cr-');
+        } else {
+            na($("#avf_district_and_postal_row"), false);
+            na($("#avf_dif_district_and_postal_row"), false);
+
+            if (['MX', 'México', 'Mexico'].includes(self.avfBillingCountry.val())) {
+                complete(self.avfBillingState, 'mx-');
+                complete(self.avfBillingCity, 'mx-');
+                complete(self.avfBillingDistrict, 'mx-');
+                complete(self.avfDifBillingState, 'mx-');
+                complete(self.avfDifBillingCity, 'mx-');
+                complete(self.avfDifBillingDistrict, 'mx-');
+            } else {
+                complete(self.avfBillingState, '');
+                complete(self.avfBillingCity, '');
+                complete(self.avfBillingDistrict, '');
+                complete(self.avfDifBillingState, '');
+                complete(self.avfDifBillingCity, '');
+                complete(self.avfDifBillingDistrict, '');
+            }
         }
     }
 
-    bindChangeOnCanton() {
+    initAvfBillingForm() {
         const self = this;
-        $yvShippingCanton.bind("input propertychange", function () {
-            self.checkIfCanOpenThirdStep();
-
-            $("#shipping_city").val($yvShippingCanton.val());
-            if (!self.differentBillingAddress) {
-                $("#billing_city").val($yvShippingCanton.val());   
-            }
-
-            $("#shipping_city").trigger("change");
-            if (!self.differentBillingAddress) {
-                $("#billing_city").trigger("change");   
-            }
-
-            $yvShippingPostal.val($("#shipping_postcode").val());
-        });
-    }
-
-    function setupBillingAddressForm() {
-        if ($("#billing_country").attr("type") == "hidden") {
-            $yvDifShippingPais.val(
+        if (self.wooBillingCountry.attr("type") === "hidden") {
+            self.avfDifBillingCountry.val(
                 $("#billing_country_field")
                     .find(".woocommerce-input-wrapper strong")
                     .text()
             );
         } else {
-            $yvDifShippingPais.replaceWith(
-                '<select id="' + $yvDifShippingPais.attr("id") + '">'
+            self.avfDifBillingCountry.replaceWith('<select id="' + self.avfDifBillingCountry.attr("id") + '">');
+            self.avfDifBillingCountry = $("#avf_dif_billing_pais");
+            self.bindDifCountryChange();
+            self.completeAvfSelectorWithWooSelector(
+                $("#billing_country option"),
+                self.avfDifBillingCountry,
+                self.wooBillingCountry
             );
-            $yvDifShippingPais = $("#yv_dif_billing_pais");
-
-            bindChangeOnDifPais();
-
-            $yvDifShippingPais.html("");
-
-            $("#billing_country option").each(function () {
-                $yvDifShippingPais.append($(this).clone());
-            });
-
-            if ($("#billing_country").val() != "") {
-                $yvDifShippingPais.val($("#billing_country").val());
-            } else {
-                $yvDifShippingPais.find("option").eq(0).attr("selected", "selected");
-            }
         }
+        self.switchDifCityHTMLType();
+        self.completeAvfSelectorWithWooSelector(
+            $("#billing_state option"),
+            self.avfDifBillingState,
+            self.wooBillingState
+        );
+        self.completeAvfSelectorWithWooSelector(
+            $("#billing_city option"),
+            self.avfDifBillingCity,
+            self.wooBillingCity
+        );
+    }
 
-        changeTagForDifCanton();
-
-        // shipping state
-        $yvDifShippingProvincia.html("");
-
-        $("#billing_state option").each(function () {
-            $yvDifShippingProvincia.append($(this).clone());
+    bindDifCountryChange() {
+        const self = this;
+        self.avfDifBillingCountry.bind("input propertychange", function () {
+            self.wooBillingCountry.val(self.avfDifBillingCountry.val());
+            self.wooBillingCountry.trigger("change");
+            self.completeAvfSelectorWithWooSelector(
+                $("#billing_state option"),
+                self.avfDifBillingState,
+                self.avfBillingState
+            );
+            self.switchDifCityHTMLType();
+            self.shippingZonesLabels();
         });
+    }
 
-        if ($("#billing_state").val() != "") {
-            $yvDifShippingProvincia.val($("#billing_state").val());
+    bindCountryChange() {
+        const self = this;
+        self.avfBillingCountry.bind("input propertychange", function () {
+            self.wooShippingCountry.val(self.avfBillingCountry.val());
+            self.wooShippingCountry.trigger("change");
+            if (!self.differentBillingAddress) {
+                self.wooBillingCountry.val(self.avfBillingCountry.val());
+                self.wooBillingCountry.trigger("change");
+            }
+            self.completeAvfSelectorWithWooSelector(
+                $("#shipping_state option"),
+                self.avfBillingState,
+                self.wooShippingState
+            );
+            self.switchCityHTMLType();
+            self.shippingZonesLabels();
+            self.checkIfCanOpenThirdStep();
+        });
+    }
+
+    // --
+
+    bindCityChange() {
+        const self = this;
+        self.avfBillingCity.bind("input propertychange", function () {
+            self.wooShippingCity.val(self.avfBillingCity.val());
+            self.wooShippingCity.trigger("change");
+            if (!self.differentBillingAddress) {
+                self.wooBillingCity.val(self.avfBillingCity.val());
+                self.wooBillingCity.trigger("change");
+            }
+            self.avfBillingZip.val(self.wooShippingZip.val());
+            self.checkIfCanOpenThirdStep();
+        });
+    }
+
+    bindDifCityChange() {
+        const self = this;
+        self.avfDifBillingCity.bind("input propertychange", function () {
+            self.wooBillingCity.val(self.avfDifBillingCity.val());
+            self.wooBillingCity.trigger("change");
+            self.avfDifBillingZip.val(self.wooBillingZip.val());
+        });
+    }
+
+    switchCityHTMLType() {
+        const self = this;
+        if (self.wooShippingCity.parent().find("select")[0]) {
+            self.avfBillingCity.replaceWith('<select id="' + self.avfBillingCity.attr("id") + '">');
+            self.avfBillingCity = $("#avf_billing_city");
+            self.completeAvfSelectorWithWooSelector(
+                $("#shipping_city option"),
+                self.avfBillingCity,
+                self.wooShippingCity
+            );
         } else {
-            $yvDifShippingProvincia.find("option").eq(0).attr("selected", "selected");
+            self.avfBillingCity.replaceWith('<input id="' + self.avfBillingCity.attr("id") + '">');
+            self.avfBillingCity = $("#avf_billing_city");
         }
-        // shipping state end
-
-        // shipping town select
-        setTimeout(function () {
-            $yvDifShippingCanton.html("");
-
-            $("#billing_city option").each(function () {
-                $yvDifShippingCanton.append($(this).clone());
-            });
-
-            if ($("#billing_city").val() != "") {
-                $yvDifShippingCanton.val($("#billing_city").val());
-            } else {
-                $yvDifShippingCanton.find("option").eq(0).attr("selected", "selected");
-            }
-        }, 1);
-        // shipping town end
+        self.bindCityChange();
     }
 
-    function bindChangeOnDifPais() {
-        $yvDifShippingPais.bind("input propertychange", function () {
-            $("#billing_country").val($yvDifShippingPais.val());
-
-            $("#billing_country").trigger("change");
-
-            // fill custom select
-            $yvDifShippingProvincia.html("");
-
-            $("#billing_state option").each(function () {
-                $yvDifShippingProvincia.append($(this).clone());
-            });
-
-            if ($("#billing_state").val() != "") {
-                $yvDifShippingProvincia.val($("#billing_state").val());
-            } else {
-                $yvDifShippingProvincia
-                    .find("option")
-                    .eq(0)
-                    .attr("selected", "selected");
-            }
-            // fill custom select end
-
-            changeTagForDifCanton();
-        });
-    }
-
-    function changeTagForDifCanton() {
-        if ($("#billing_city").parent().find("select")[0]) {
-            $yvDifShippingCanton.replaceWith(
-                '<select id="' + $yvDifShippingCanton.attr("id") + '">'
+    switchDifCityHTMLType() {
+        const self = this;
+        if (self.wooBillingCity.parent().find("select")[0]) {
+            self.avfDifBillingCity.replaceWith('<select id="' + self.avfDifBillingCity.attr("id") + '">');
+            self.avfDifBillingCity = $("#avf_dif_billing_canton");
+            self.completeAvfSelectorWithWooSelector(
+                $("#billing_city option"),
+                self.avfDifBillingCity,
+                self.wooBillingCity
             );
-            $yvDifShippingCanton = $("#yv_dif_billing_canton");
-
-            bingChangeOnDifCanton();
-
-            $yvDifShippingCanton.html("");
-
-            $("#billing_city option").each(function () {
-                $yvDifShippingCanton.append($(this).clone());
-            });
-
-            if ($("#billing_city").val() != "") {
-                $yvDifShippingCanton.val($("#billilng_city").val());
-            } else {
-                $yvDifShippingCanton.find("option").eq(0).attr("selected", "selected");
-            }
+            self.bindDifCityChange();
         } else {
-            $yvDifShippingCanton.replaceWith(
-                '<input id="' + $yvDifShippingCanton.attr("id") + '">'
-            );
-            $yvDifShippingCanton = $("#yv_dif_billing_canton");
-
-            bingChangeOnDifCanton();
+            self.avfDifBillingCity.replaceWith('<input id="' + self.avfDifBillingCity.attr("id") + '">');
+            self.avfDifBillingCity = $("#avf_dif_billing_canton");
+            self.bindDifCityChange();
         }
     }
 
-    function bingChangeOnDifCanton() {
-        $yvDifShippingCanton.bind("input propertychange", function () {
-            $("#billing_city").val($yvDifShippingCanton.val());
+    // --
 
-            $("#billing_city").trigger("change");
-
-            $yvDifShippingPostal.val($("#billing_postcode").val());
-        });
-    }
-
-
-    step1() {
-        let $yvName = $("#yv_billing_name"),
-            $yvEmail = $("#yv_billing_email"),
-            $yvTel = $("#yv_billing_tel"),
-            $yvToSecondStepButton = $("#yv_to_second_step_button"),
+    initStep1() {
+        const self = this,
             $step = $(".step-content-item"),
-            $stepTab = $("section.type-custom-checkout .step-item");
+            $stepTab = $("section.type-avify-checkout .step-item");
 
-        setTimeout(function () {
-            checkIfCanOpenSecondStep();
-        }, 200);
-
-        $yvName.bind("input propertychange", function () {
-            $("#billing_first_name").val($yvName.val());
-            $("#shipping_first_name").val($yvName.val());
-            checkIfCanOpenSecondStep();
-        });
-        $yvEmail.bind("input propertychange", function () {
-            $("#billing_email").val($yvEmail.val());
-            checkIfCanOpenSecondStep();
-        });
-        $yvTel.bind("input propertychange", function () {
-            $("#billing_phone").val($yvTel.val());
-            checkIfCanOpenSecondStep();
+        $step.eq(0).addClass("active");
+        $stepTab.eq(0).addClass("active");
+        $stepTab.on("click", function () {
+            if ($(this).hasClass("active")) {
+                $step.removeClass("active");
+                $step.eq($(this).index()).addClass("active");
+                $(this).nextAll(".step-item").removeClass("active");
+                $(this).nextAll(".step-item").removeClass("completed");
+                $(this).removeClass("completed active");
+                $(this).addClass("active");
+                self.currentStep = $(this).index() + 1;
+                self.executeObserve();
+            }
         });
 
-        $yvToSecondStepButton.on("click", function () {
+        self.avfBillingName.val(self.wooBillingName.val() ?? self.wooShippingName.val());
+        self.avfBillingEmail.val(self.wooBillingEmail.val() ?? self.wooBillingEmail.val());
+        self.avfBillingPhone.val(self.wooBillingPhone.val() ?? self.wooBillingPhone.val());
+
+        self.avfBillingName.bind("input propertychange", function () {
+            self.wooBillingName.val(self.avfBillingName.val());
+            self.wooShippingName.val(self.avfBillingName.val());
+            self.checkIfCanOpenSecondStep();
+        });
+        self.avfBillingEmail.bind("input propertychange", function () {
+            self.wooBillingEmail.val(self.avfBillingEmail.val());
+            self.checkIfCanOpenSecondStep();
+        });
+        self.avfBillingPhone.bind("input propertychange", function () {
+            self.wooBillingPhone.val(self.avfBillingPhone.val());
+            self.checkIfCanOpenSecondStep();
+        });
+        self.avfSecondStep.on("click", function () {
             $step.removeClass("active");
             $step.eq(1).addClass("active");
             $stepTab.eq(0).addClass("completed");
             $stepTab.eq(1).addClass("active");
+            self.currentStep = 2;
+            self.executeObserve();
         });
+        self.checkIfCanOpenSecondStep();
     }
 
-    step2() {
-        const self = this;
-        self.mapClicked = false;
+    initStep2() {
+        const self = this,
+            $step = $(".step-content-item"),
+            $stepTab = $("section.type-avify-checkout .step-item");
 
-        let $yvShippingPais = $("#yv_billing_pais"),
-            $yvShippingProvincia = $("#yv_billing_provincia"),
-            $yvShippingCanton = $("#yv_billing_canton"),
-            $yvShippingDistrito = $("#yv_billing_distrito"),
-            $yvShippingPostal = $("#yv_billing_postal"),
-            $yvShippingExacta = $("#yv_billing_exacta"),
-            $yvToThirdStepButton = $("#yv_to_third_step_button"),
-            $shippingOrPick = $("#yv_shipping_or_pick"),
-            $yvShippingMethodList = $("#yv_shipping_method"),
-            $yvShippingMethodLoader = $("#yv_shipping_method_loader"),
-            $shippingState = $("#shipping_state"),
-            $map = $("#yv_map");
-            timeout;
+        if (self.wooShippingCountry.attr("type") === "hidden") {
+            self.avfBillingCountry.val(
+                $("#shipping_country_field")
+                    .find(".woocommerce-input-wrapper strong").text()
+            );
+        } else {
+            self.avfBillingCountry.replaceWith('<select id="' + self.avfBillingCountry.attr("id") + '">');
+            self.avfBillingCountry = $("#avf_billing_country");
+            self.completeAvfSelectorWithWooSelector(
+                $("#shipping_country option"),
+                self.avfBillingCountry,
+                self.wooShippingCountry
+            );
+            self.bindCountryChange();
+        }
+        self.completeAvfSelectorWithWooSelector(
+            $("#shipping_state option"),
+            self.avfBillingState,
+            self.wooShippingState
+        );
+        self.switchCityHTMLType();
+        self.completeAvfSelectorWithWooSelector(
+            $("#shipping_city option"),
+            self.avfBillingCity,
+            self.wooShippingCity
+        );
+        self.avfBillingDistrict.val(self.wooShippingAddress1.val());
+        self.avfBillingZip.val(self.wooShippingZip.val());
+        self.avfBillingAddress.val(self.wooShippingExactDirection.val());
+
+        const avfShippingMapOrig = $("#lpac-map-container");
+        if (avfShippingMapOrig.length) {
+            const avfShippingMapPlace = $(".step-content-map-container");
+            avfShippingMapPlace.append(avfShippingMapOrig);
+        } else {
+            $(".step-content-map").hide();
+        }
 
         $(".step-content-shipping-method-content-item-2").hide();
-        if (hideLocalPickUp) {
+        if (avfHidePickUp) {
             $(".step-content-shipping-method-item").eq(1).hide();
         }
 
-        $yvShippingMethodList.hide();
-        $yvShippingMethodList.html("");
-        $yvShippingMethodLoader.hide();
-
-        $yvShippingMethodList.on(
-            "click", ".step-content-shipping-var-item",
-            function () {
-                $("body")
-                    .find("#shipping_method li")
-                    .eq($(this).index())
-                    .find("input")
-                    .click();
-                self.checkIfCanOpenThirdStep(false);
+        self.bindCountryChange();
+        self.avfBillingState.bind("input propertychange", function () {
+            self.wooShippingState.val(self.avfBillingState.val());
+            self.wooShippingState.trigger("change");
+            if (!self.differentBillingAddress) {
+                self.wooBillingState.val(self.avfBillingState.val());
+                self.wooBillingState.trigger("change");
             }
-        );
-
-        self.bindChangeOnPais();
-
-        $yvShippingProvincia.bind("input propertychange", function () {
+            self.switchCityHTMLType();
             self.checkIfCanOpenThirdStep();
-
-            $shippingState.val($yvShippingProvincia.val());
-            if (!self.differentBillingAddress) {
-                $("#billing_state").val($yvShippingProvincia.val());
-            }
-
-            $shippingState.trigger("change");
-            if (!self.differentBillingAddress) {
-                $("#billing_state").trigger("change");
-            }
-
-            self.changeTagForCanton();
         });
-
-        self.bindChangeOnCanton();
-
-        $yvShippingDistrito.bind("input propertychange", function () {
+        self.bindCityChange();
+        self.avfBillingDistrict.bind("input propertychange", function () {
+            self.wooShippingAddress1.val(self.avfBillingDistrict.val());
+            self.fireKeydownEventOnElement(self.wooShippingAddress1);
+            if (!self.differentBillingAddress) {
+                self.wooBillingAddress1.val(self.avfBillingDistrict.val());
+                self.fireKeydownEventOnElement(self.wooBillingAddress1);
+            }
             self.checkIfCanOpenThirdStep();
-
-            $("#shipping_address_1").val($yvShippingDistrito.val());
+        });
+        self.avfBillingZip.bind("input propertychange", function () {
+            self.wooShippingZip.val(self.avfBillingZip.val());
+            self.fireKeydownEventOnElement(self.wooShippingZip);
             if (!self.differentBillingAddress) {
-                $("#billing_address_1").val($yvShippingDistrito.val());
+                self.wooBillingZip.val(self.avfBillingZip.val());
+                self.fireKeydownEventOnElement(self.wooBillingZip);
             }
-x
-            self.fireKeydownEventOnElement($("#shipping_address_1"));
+            self.avfShippingMethods.hide();
+            self.avfShippingLoader.show();
+            self.checkIfCanOpenThirdStep();
+        });
+        self.avfBillingAddress.bind("input propertychange", function () {
+            self.wooShippingExactDirection.val(self.avfBillingAddress.val());
+            self.fireKeydownEventOnElement(self.wooShippingExactDirection);
+            if (!self.differentBillingAddress) {
+                self.wooBillingExactDirection.val(self.avfBillingAddress.val());
+                self.fireKeydownEventOnElement(self.wooBillingExactDirection);
+            }
+            self.checkIfCanOpenThirdStep();
         });
 
-        $yvShippingPostal.bind("input propertychange", function () {
-            checkIfCanOpenThirdStep();
+        self.avfShippingMap.on("click", function () {
+            $("section.type-avify-checkout .step-content-map-text-2").hide();
+            self.avfShippingMethods.hide();
+            self.avfShippingLoader.show();
 
-            $("#shipping_postcode").val($yvShippingPostal.val());
             if (!self.differentBillingAddress) {
-                $("#billing_postcode").val($yvShippingPostal.val());
-            }
-
-            fireKeydownEventOnElement($("#shipping_postcode"));
-        });
-
-        $yvShippingExacta.bind("input propertychange", function () {
-            checkIfCanOpenThirdStep(false);
-
-            $("#shipping_exact_direction").val($yvShippingExacta.val());
-            if (!self.differentBillingAddress) {
-                $("#billing_exact_direction").val($yvShippingExacta.val());
-            }
-
-            fireKeydownEventOnElement($("#shipping_exact_direction"));
-        });
-
-        $map.on("click", function () {
-            self.mapClicked = true;
-
-            $("section.type-custom-checkout .step-content-map-text-2").hide();
-            $yvShippingMethodList.hide();
-            $yvShippingMethodLoader.show();
-
-            clearTimeout(timeout);
-
-            timeout = setTimeout(function () {
-                self.getShippingMethods();
-
-                if (!self.differentBillingAddress) {
-                    if (!$("#billing_country").is('input[type="hidden"]')) {
-                        $("#billing_country").val($yvShippingPais.val());
-                        $("#billing_country").trigger("change");
-                    }
-
-                    $("#billing_state").val($yvShippingProvincia.val());
-                    $("#billing_state").trigger("change");
-                    $("#billing_city").val($yvShippingCanton.val());
-                    $("#billing_city").trigger("change");
-                    $("#billing_address_1").val($yvShippingDistrito.val());
-                    $("#billing_postcode").val($yvShippingPostal.val());
-                    $("#billing_exact_direction").val($yvShippingExacta.val());
+                if (!self.wooBillingCountry.is('input[type="hidden"]')) {
+                    self.wooBillingCountry.val(self.avfBillingCountry.val());
+                    self.wooBillingCountry.trigger("change");
                 }
+                self.avfBillingState.val(self.avfBillingState.val());
+                self.avfBillingState.trigger("change");
+                self.wooBillingCity.val(self.avfBillingCity.val());
+                self.wooBillingCity.trigger("change");
+                self.wooBillingAddress1.val(self.avfBillingDistrict.val());
+                self.wooBillingZip.val(self.avfBillingZip.val());
+                self.wooBillingZip.trigger("change");
+                self.wooBillingExactDirection.val(self.avfBillingAddress.val());
+            }
 
-                if (!$("#shipping_country").is('input[type="hidden"]')) {
-                    $("#shipping_country").val($yvShippingPais.val());
-                    $("#shipping_country").trigger("change");
-                }
-
-                $("#shipping_state").val($yvShippingProvincia.val());
-                $("#shipping_state").trigger("change");
-                $("#shipping_city").val($yvShippingCanton.val());
-                $("#shipping_city").trigger("change");
-                $("#shipping_address_1").val($yvShippingDistrito.val());
-                $("#shipping_postcode").val($yvShippingPostal.val());
-                $("#shipping_exact_direction").val($yvShippingExacta.val());
-
-                $(".woocommerce-checkout").trigger("update_checkout");
-            }, 500);
+            if (!self.wooShippingCountry.is('input[type="hidden"]')) {
+                self.wooShippingCountry.val(self.avfBillingCountry.val());
+                self.wooShippingCountry.trigger("change");
+            }
+            self.wooShippingState.val(self.avfBillingState.val());
+            self.wooShippingState.trigger("change");
+            self.wooShippingCity.val(self.avfBillingCity.val());
+            self.wooShippingCity.trigger("change");
+            self.wooShippingAddress1.val(self.avfBillingDistrict.val());
+            self.wooShippingZip.val(self.avfBillingZip.val());
+            self.wooShippingZip.trigger("change");
+            self.wooShippingExactDirection.val(self.avfBillingAddress.val());
         });
-        $map.trigger("click");
-
-        $shippingOrPick.on("click", function () {
-            if ($("#yv_shipping_or_pick_1").is(":checked")) {
+        self.avfShipOrPick.on("click", function () {
+            self.avfThirdStep.addClass("var-disabled");
+            if ($("#avf_shipping_or_pick_1").is(":checked")) {
                 $(".step-content-shipping-method-content-item-1").show();
                 $(".step-content-shipping-method-content-item-2").hide();
-
-                $yvToThirdStepButton.addClass("var-disabled");
-
-                checkIfCanOpenThirdStep();
-
-                localPickUp = false;
-            }
-
-            if (pickupOption.is(":checked")) {
+                self.avfIsPickUp = false;
+            } else {
                 $(".step-content-shipping-method-content-item-2").show();
                 $(".step-content-shipping-method-content-item-1").hide();
+                self.avfIsPickUp = true;
+            }
+            self.checkIfCanOpenThirdStep();
+        });
+        self.avfThirdStep.on("click", function () {
+            $step.removeClass("active");
+            $step.eq(2).addClass("active");
+            $stepTab.eq(1).addClass("completed");
+            $stepTab.eq(2).addClass("active");
+            self.currentStep = 3;
+            self.executeObserve();
+        });
+        self.avfShippingLoader.hide();
+    }
 
-                $yvToThirdStepButton.removeClass("var-disabled");
+    initStep3() {
+        const self = this;
 
-                var $shippingMethodItem = $("body")
-                    .find("#shipping_method li")
-                    .eq(0)
-                    .find("input");
+        self.bindDifCountryChange();
+        self.avfDifBillingState.bind("input propertychange", function () {
+            self.avfBillingState.val(self.avfDifBillingState.val());
+            self.avfBillingState.trigger("change");
 
-                $shippingMethodItem.click();
+            // fill custom select
+            self.switchDifCityHTMLType();
+            // fill custom select end
+        });
+        self.bindDifCityChange();
+        self.avfDifBillingDistrict.bind("input propertychange", function () {
+            self.wooBillingAddress1.val(self.avfDifBillingDistrict.val());
+            self.fireKeydownEventOnElement(self.wooBillingAddress1);
+        });
+        self.avfDifBillingZip.bind("input propertychange", function () {
+            self.checkIfCanOpenThirdStep();
+            self.wooBillingZip.val(self.avfDifBillingZip.val());
+            self.fireKeydownEventOnElement(self.wooBillingZip);
+        });
+        self.avfDifBillingAddress.bind("input propertychange", function () {
+            self.checkIfCanOpenThirdStep();
+            self.wooBillingExactDirection.val(self.avfDifBillingAddress.val());
+            self.fireKeydownEventOnElement(self.wooBillingExactDirection);
+        });
 
-                localPickUp = true;
+        $(".step-content-payment-var-tab-item-content").hide();
+        $(".step-content-electronic-facture-content-holder").hide();
+        $(".step-content-payment-electronic-facture-another-form-holder").hide();
+        $(".step-content-payment-electronic-facture-label").on("click", function () {
+            if ($(this).find("input").is(":checked")) {
+                $(".step-content-electronic-facture-content-holder").show();
+                $("#additional_want_electronic_invoice").prop("checked", true);
+                $("#avf_identification_default_info").html(`
+				${self.avfBillingCountry.val()} / 
+				${self.avfBillingState.find("option:selected").text()} / 
+				${self.avfBillingCity.find("option:selected")[0]
+                    ? self.avfBillingCity.find("option:selected").text()
+                    : self.avfBillingCity.val()} / 
+				${self.avfBillingDistrict.val()} / 
+				${self.avfBillingAddress.val()}
+			`);
+            } else {
+                $(".step-content-electronic-facture-content-holder").hide();
+                $("#additional_want_electronic_invoice").prop("checked", false);
+                $("#additional_different_billing_address").prop("checked", false);
+                self.differentBillingAddress = false;
+            }
+        });
+        $(".step-content-payment-electronic-facture-another-label").on("click", function () {
+            if ($(this).find("input").is(":checked")) {
+                $(".step-content-payment-electronic-facture-another-form-holder").show();
+                $("#additional_different_billing_address").prop("checked", true);
+                self.differentBillingAddress = true;
+                self.initAvfBillingForm();
+            } else {
+                $(".step-content-payment-electronic-facture-another-form-holder").hide();
+                $("#additional_different_billing_address").prop("checked", false);
+                self.differentBillingAddress = false;
             }
         });
 
-        $yvToThirdStepButton.on("click", function () {
-            $step.removeClass("active");
+        $("#additional_identification_type option").each(function () {
+            $("#avf_additional_identification_type").append($(this).clone());
+        });
+        $("#avf_additional_identification_type").bind("input propertychange", function () {
+            $("#additional_identification_type").val($(this).val());
+            $("#additional_identification_type").trigger("change");
+        });
+        $("#avf_additional_identification_number").bind("input propertychange", function () {
+            $("#additional_identification_number").val($(this).val());
+        });
 
-            $step.eq(2).addClass("active");
+        self.avfPlaceOrder.on("click", function () {
+            if (self.avfIsPickUp) {
+                // autocomplete
+                setTimeout(function () {
+                    if (self.wooBillingCountry.is("select") && !self.wooBillingCountry.val()) {
+                        self.wooBillingCountry.val(self.wooBillingCountry.find("option").eq(1).val());
+                        self.wooBillingCountry.trigger("change");
+                    }
+                    if (self.wooShippingCountry.is("select") && !self.wooShippingCountry.val()) {
+                        self.wooShippingCountry.val(self.wooShippingCountry.find("option").eq(1).val());
+                        self.wooShippingCountry.trigger("change");
+                    }
+                }, 100);
+                setTimeout(function () {
+                    if (self.avfBillingState.is("select") && !self.avfBillingState.val()) {
+                        self.avfBillingState.val(self.avfBillingState.find("option").eq(1).val());
+                        self.avfBillingState.trigger("change");
+                    }
+                    if (self.wooShippingState.is("select") && !self.wooShippingState.val()) {
+                        self.wooShippingState.val(self.wooShippingState.find("option").eq(1).val());
+                        self.wooShippingState.trigger("change");
+                    }
+                }, 200);
+                setTimeout(function () {
+                    if (self.wooBillingCity.is("select") && !self.wooBillingCity.val()) {
+                        self.wooBillingCity.val(self.wooBillingCity.find("option").eq(1).val());
+                        self.wooBillingCity.trigger("change");
+                    }
+                    if (self.wooShippingCity.is("select") && !self.wooShippingCity.val()) {
+                        self.wooShippingCity.val(self.wooShippingCity.find("option").eq(1).val());
+                        self.wooShippingCity.trigger("change");
+                    }
+                }, 300);
+                setTimeout(function () {
+                    if (!self.wooBillingCountry.val())
+                        self.wooBillingCountry.val("Local pickup");
+                    if (!self.wooShippingCountry.val())
+                        self.wooShippingCountry.val("Local pickup");
 
-            $stepTab.eq(1).addClass("completed");
-            $stepTab.eq(2).addClass("active");
+                    if (!self.avfBillingState.val())
+                        self.avfBillingState.val("Local pickup");
+                    if (!self.wooShippingState.val())
+                        self.wooShippingState.val("Local pickup");
+
+                    if (!self.wooBillingCity.val())
+                        self.wooBillingCity.val("Local pickup");
+                    if (!self.wooShippingCity.val())
+                        self.wooShippingCity.val("Local pickup");
+
+                    if (!self.wooBillingZip.val())
+                        self.wooBillingZip.val("Local pickup");
+                    if (!self.wooShippingZip.val())
+                        self.wooShippingZip.val("Local pickup");
+
+                    if (!self.wooBillingAddress1.val())
+                        self.wooBillingAddress1.val("Local pickup");
+                    if (!self.wooShippingAddress1.val())
+                        self.wooShippingAddress1.val("Local pickup");
+                }, 400);
+            }
+
+            self.avfCheckoutLoader.addClass("show");
+            setTimeout(function () {
+                $("#place_order").click();
+            }, 500);
+            setTimeout(function () {
+                self.avfCheckoutLoader.removeClass("show");
+            }, 5000);
         });
     }
 
-    init() {
-        const self = this;
-        const orderReceived = $(".woocommerce-order-received");
+    // --
 
-        if ($("body.woocommerce-checkout")[0] &&
-            $(".type-custom-checkout")[0] &&
-            !orderReceived[0]
-        ) {
-            $(".yv-header-nav, .yv-header-search, .yv-header-cart, footer").hide();
+    observeShippingMethods() {
+        const self = this,
+            wooShippingMethods = self.body.find("#shipping_method li"),
+            inStoreContainer = document.querySelector('.step-content-self-pickup-info');
 
-            setTimeout(function () {
-                const billingFirstNameVal = $("#billing_first_name").val();
-                $yvName.val(billingFirstNameVal);
-                $("#shipping_first_name").val(billingFirstNameVal);
-                $yvEmail.val($("#billing_email").val());
-                $yvTel.val($("#billing_phone").val());
-
-                if ($("#shipping_country").attr("type") == "hidden") {
-                    $yvShippingPais.val(
-                        $("#shipping_country_field")
-                            .find(".woocommerce-input-wrapper strong")
-                            .text()
-                    );
-                } else {
-                    $yvShippingPais.replaceWith(
-                        '<select id="' + $yvShippingPais.attr("id") + '">'
-                    );
-                    $yvShippingPais = $("#yv_billing_pais");
-
-                    self.bindChangeOnPais();
-
-                    $yvShippingPais.html("");
-
-                    $("#shipping_country option").each(function () {
-                        $yvShippingPais.append($(this).clone());
-                    });
-
-                    if ($("#shipping_country").val() != "") {
-                        $yvShippingPais.val($("#shipping_country").val());
-                    } else {
-                        $yvShippingPais.find("option").eq(0).attr("selected", "selected");
-                    }
+        self.avfShippingMethods.html("");
+        inStoreContainer.innerHTML = "";
+        if (wooShippingMethods.length) {
+            wooShippingMethods.each(function() {
+                self.avfShippingMethods.append(self.avfShippingMethodsHTML);
+                const wooInput = $(this).find("input"),
+                    avfNewMethod = self.avfShippingMethods.find(".avf-new-method");
+                avfNewMethod.find("input").attr('value', wooInput.val());
+                avfNewMethod.attr("data-shipping-value", wooInput.val());
+                avfNewMethod.find(".step-content-shipping-var-item-text .g__text").text($(this).find("label")[0].childNodes[0].nodeValue);
+                avfNewMethod.find(".step-content-shipping-var-item-text-2 .g__text").text($(this).find(".amount").text());
+                if (wooInput.is(":checked")) {
+                    avfNewMethod.find("input").prop("checked", true);
                 }
 
-                $yvShippingDistrito.val($("#shipping_address_1").val());
-                $yvShippingPostal.val($("#shipping_postcode").val());
-                $yvShippingExacta.val($("#shipping_exact_direction").val());
+                // in store methods
+                if (wooInput.val().startsWith('avfdeliveries-instorepickup')) {
+                    const instoreMethod = document.createElement('div');
+                    instoreMethod.className = avfNewMethod.attr('class');
+                    instoreMethod.innerHTML = avfNewMethod.html();
+                    inStoreContainer.appendChild(instoreMethod);
+                    instoreMethod.addEventListener('click', (e) => {
+                        wooInput.click();
+                        self.checkIfCanOpenThirdStep();
+                    });
+                    if (wooInput.is(":checked")) {
+                        instoreMethod.querySelector("input").setAttribute("checked", "true");
+                    }
+                    avfNewMethod.remove();
+                } else {
+                    avfNewMethod.removeClass("avf-new-method");
+                }
+            });
 
-                // shipping state
-                $("#shipping_state option").each(function () {
-                    $yvShippingProvincia.append($(this).clone());
+            // on click avify shipping methods
+            if (!self.avfShippingMethods.hasClass('evented')) {
+                self.avfShippingMethods.addClass('evented')
+                self.avfShippingMethods.on("click", ".step-content-shipping-var-item", (e) => {
+                    const shippingMethod = $(e.target).attr('value');
+                    if (shippingMethod) {
+                        self.body
+                            .find("#shipping_method li")
+                            .find(`input[value='${shippingMethod}']`)
+                            .click();
+                        self.checkIfCanOpenThirdStep();
+                    }
                 });
-
-                if ($("#shipping_state").val() != "") {
-                    $yvShippingProvincia.val($("#shipping_state").val());
-                } else {
-                    $yvShippingProvincia.find("option").eq(0).attr("selected", "selected");
-                }
-                // shipping state end
-
-                // shipping town select
-                setTimeout(function () {
-                    changeTagForCanton();
-
-                    $yvShippingCanton.html("");
-
-                    $("#shipping_city option").each(function () {
-                        $yvShippingCanton.append($(this).clone());
-                    });
-
-                    if ($("#shipping_city").val() != "") {
-                        $yvShippingCanton.val($("#shipping_city").val());
-                    } else {
-                        $yvShippingCanton.find("option").eq(0).attr("selected", "selected");
-                    }
-                }, 2000);
-                // shipping town end
-            }, 100);
-
-            if ($("#lpac-map-container")[0]) {
-                appendMap();
-            } else {
-                $(".step-content-map").hide();
             }
-
-            var $step = $(".step-content-item"),
-                $stepTab = $("section.type-custom-checkout .step-item");
-
-            $step.eq(0).addClass("active");
-            $stepTab.eq(0).addClass("active");
-
-            var localPickUp = false;
-
-            $stepTab.on("click", function () {
-                if ($(this).hasClass("active")) {
-                    $step.removeClass("active");
-                    $step.eq($(this).index()).addClass("active");
-
-                    $(this).nextAll(".step-item").removeClass("active");
-                    $(this).nextAll(".step-item").removeClass("completed");
-                    $(this).removeClass("completed active");
-                    $(this).addClass("active");
-                }
-            });
-
-            self.step1();
-            self.step2();
-
-            // STEP 3
-            var $yvDifShippingPais = $("#yv_dif_billing_pais"),
-                $yvDifShippingProvincia = $("#yv_dif_billing_provincia"),
-                $yvDifShippingCanton = $("#yv_dif_billing_canton");
-            $yvDifShippingDistrito = $("#yv_dif_billing_distrito");
-            $yvDifShippingPostal = $("#yv_dif_billing_postal");
-            $yvDifShippingExacta = $("#yv_dif_billing_exacta");
-
-            var $yvCheckoutButton = $("#yv_checkout_button");
-
-            $(".step-content-payment-var-tab-item-content").hide();
-            $(".step-contentelectronic-facture-content-holder").hide();
-            $(".step-content-payment-electronic-facture-another-form-holder").hide();
-
-            $(".step-content-payment-electronic-facture-label").on("click", function () {
-                if ($(this).find("input").is(":checked")) {
-                    $(".step-contentelectronic-facture-content-holder").show();
-
-                    $("#additional_want_electronic_invoice").prop("checked", true);
-
-                    $("#yv_identification_default_info").html(`
-				${$yvShippingPais.val()} / 
-				${$yvShippingProvincia.find("option:selected").text()} / 
-				${
-                        $yvShippingCanton.find("option:selected")[0]
-                            ? $yvShippingCanton.find("option:selected").text()
-                            : $yvShippingCanton.val()
-                    } / 
-				${$yvShippingDistrito.val()} / 
-				${$yvShippingExacta.val()}
-			`);
-                } else {
-                    $(".step-contentelectronic-facture-content-holder").hide();
-
-                    $("#additional_want_electronic_invoice").prop("checked", false);
-                    $("#additional_different_billing_address").prop("checked", false);
-
-                    self.differentBillingAddress = false;
-                }
-            });
-
-            $(".step-content-payment-electronic-facture-another-label").on(
-                "click",
-                function () {
-                    if ($(this).find("input").is(":checked")) {
-                        $(
-                            ".step-content-payment-electronic-facture-another-form-holder"
-                        ).show();
-
-                        $("#additional_different_billing_address").prop("checked", true);
-
-                        self.differentBillingAddress = true;
-
-                        setupBillingAddressForm();
-                    } else {
-                        $(
-                            ".step-content-payment-electronic-facture-another-form-holder"
-                        ).hide();
-
-                        $("#additional_different_billing_address").prop("checked", false);
-
-                        self.differentBillingAddress = false;
-                    }
-                }
-            );
-
-            bindChangeOnDifPais();
-
-            $yvDifShippingProvincia.bind("input propertychange", function () {
-                $("#billing_state").val($yvDifShippingProvincia.val());
-
-                $("#billing_state").trigger("change");
-
-                // fill custom select
-                changeTagForDifCanton();
-                // fill custom select end
-            });
-
-            bingChangeOnDifCanton();
-
-            $yvDifShippingDistrito.bind("input propertychange", function () {
-                $("#billing_address_1").val($yvDifShippingDistrito.val());
-
-                fireKeydownEventOnElement($("#billing_address_1"));
-            });
-
-            $yvDifShippingPostal.bind("input propertychange", function () {
-                checkIfCanOpenThirdStep();
-
-                $("#billing_postcode").val($yvDifShippingPostal.val());
-
-                fireKeydownEventOnElement($("#billing_postcode"));
-            });
-
-            $yvDifShippingExacta.bind("input propertychange", function () {
-                checkIfCanOpenThirdStep();
-
-                $("#billing_exact_direction").val($yvDifShippingExacta.val());
-
-                fireKeydownEventOnElement($("#billing_exact_direction"));
-            });
-
-            $("#additional_identification_type option").each(function () {
-                $("#yv_additional_identification_type").append($(this).clone());
-            });
-
-            $("#yv_additional_identification_type").bind("input propertychange", function () {
-                $("#additional_identification_type").val($(this).val());
-                $("#additional_identification_type").trigger("change");
-            });
-
-            $("#yv_additional_identification_number").bind(
-                "input propertychange",
-                function () {
-                    $("#additional_identification_number").val($(this).val());
-                }
-            );
-
-            var $checkoutLoader = $("#yv_checkout_end_loader");
-
-            $yvCheckoutButton.on("click", function () {
-                if (localPickUp) {
-                    setTimeout(function () {
-                        if ($("#billing_country").is("select") && !$("#billing_country").val()) {
-                            $("#billing_country").val(
-                                $("#billing_country").find("option").eq(1).val()
-                            );
-                            $("#billing_country").trigger("change");
-                        }
-                        if (
-                            $("#shipping_country").is("select") &&
-                            !$("#shipping_country").val()
-                        ) {
-                            $("#shipping_country").val(
-                                $("#shipping_country").find("option").eq(1).val()
-                            );
-                            $("#shipping_country").trigger("change");
-                        }
-                    }, 100);
-
-                    setTimeout(function () {
-                        if ($("#billing_state").is("select") && !$("#billing_state").val()) {
-                            $("#billing_state").val(
-                                $("#billing_state").find("option").eq(1).val()
-                            );
-                            $("#billing_state").trigger("change");
-                        }
-                        if ($("#shipping_state").is("select") && !$("#shipping_state").val()) {
-                            $("#shipping_state").val(
-                                $("#shipping_state").find("option").eq(1).val()
-                            );
-                            $("#shipping_state").trigger("change");
-                        }
-                    }, 200);
-
-                    setTimeout(function () {
-                        if ($("#billing_city").is("select") && !$("#billing_city").val()) {
-                            $("#billing_city").val($("#billing_city").find("option").eq(1).val());
-                            $("#billing_city").trigger("change");
-                        }
-                        if ($("#shipping_city").is("select") && !$("#shipping_city").val()) {
-                            $("#shipping_city").val(
-                                $("#shipping_city").find("option").eq(1).val()
-                            );
-                            $("#shipping_city").trigger("change");
-                        }
-                    }, 300);
-
-                    setTimeout(function () {
-                        if ($("#billing_country").val() == "")
-                            $("#billing_country").val("Local pickup");
-                        if ($("#shipping_country").val() == "")
-                            $("#shipping_country").val("Local pickup");
-
-                        if ($("#billing_state").val() == "")
-                            $("#billing_state").val("Local pickup");
-                        if ($("#shipping_state").val() == "")
-                            $("#shipping_state").val("Local pickup");
-
-                        if ($("#billing_city").val() == "")
-                            $("#billing_city").val("Local pickup");
-                        if ($("#shipping_city").val() == "")
-                            $("#shipping_city").val("Local pickup");
-
-                        if ($("#billing_postcode").val() == "")
-                            $("#billing_postcode").val("Local pickup");
-                        if ($("#shipping_postcode").val() == "")
-                            $("#shipping_postcode").val("Local pickup");
-
-                        if ($("#billing_address_1").val() == "")
-                            $("#billing_address_1").val("Local pickup");
-                        if ($("#shipping_address_1").val() == "")
-                            $("#shipping_address_1").val("Local pickup");
-                    }, 400);
-                }
-
-                $checkoutLoader.addClass("show");
-
-                setTimeout(function () {
-                    $("#place_order").click();
-                }, 500);
-
-                setTimeout(function () {
-                    $checkoutLoader.removeClass("show");
-                }, 5000);
-            });
-            // STEP 3 END
-
-            // PAYMENT POSITION
-            var paymentMethodHTML = `<div class="yv-wc_payment_method-inner"></div>`;
-            setInterval(function () {
-                // payment
-                var $payment = $("#payment"),
-                    $paymentDestination = $(".step-content-payment-container-for-woo");
-
-                var paymentY = $payment.offset().top,
-                    paymentDestY = $paymentDestination.offset().top,
-                    paymentX = $payment.offset().left,
-                    paymentDestX = $paymentDestination.offset().left;
-
-                var paymentDiffY = paymentDestY - paymentY,
-                    paymentDiffX = paymentDestX - paymentX;
-
-                if (paymentDestY != 0) {
-                    $paymentDestination.css(
-                        "height",
-                        $("body").find(".wc_payment_methods").height()
-                    );
-
-                    $("body")
-                        .find(".wc_payment_methods")
-                        .css("top", paymentDiffY + "px");
-                    $("body")
-                        .find(".wc_payment_methods")
-                        .css("left", paymentDiffX + "px");
-                    $("body")
-                        .find(".wc_payment_methods")
-                        .css("width", $paymentDestination.width());
-
-                    $("body")
-                        .find(".wc_payment_method")
-                        .each(function () {
-                            if (!$(this).find(".yv-wc_payment_method-inner")[0]) {
-                                $(this).prepend(paymentMethodHTML);
-
-                                $(this)
-                                    .find(".yv-wc_payment_method-inner")
-                                    .prepend($(this).find("> label"));
-                                $(this)
-                                    .find(".yv-wc_payment_method-inner")
-                                    .prepend(
-                                        '<div class="yv-wc_payment_method-custom-checkbox"></div>'
-                                    );
-                                $(this)
-                                    .find(".yv-wc_payment_method-inner")
-                                    .prepend($(this).find("> input"));
-                            }
-                        });
-                } else {
-                    $("body")
-                        .find(".wc_payment_methods")
-                        .css("top", 0 + "px");
-                }
-                // payment end
-
-                // file for cheque
-                if ($("#payment .payment_method_cheque")[0]) {
-                    if (!$("#payment .payment_method_cheque .yv-payment_box-inner")[0]) {
-                        $("body")
-                            .find(".payment_box.payment_method_cheque")
-                            .append('<div class="yv-payment_box-inner"></div>');
-                    }
-
-                    var $payment = $(".woocommerce-notices-wrapper"),
-                        $paymentDestination = $(".yv-payment_box-inner");
-
-                    var paymentY = $payment.offset().top,
-                        paymentDestY = $paymentDestination.offset().top,
-                        paymentX = $payment.offset().left,
-                        paymentDestX = $paymentDestination.offset().left;
-
-                    var paymentDiffY = paymentDestY - paymentY,
-                        paymentDiffX = paymentDestX - paymentX;
-
-                    if ($("#payment_method_cheque").is(":checked")) {
-                        $("body").find("#alg_checkout_files_upload_form_1").addClass("active");
-                        $("body")
-                            .find("#alg_checkout_files_upload_form_1")
-                            .css("top", paymentDiffY + "px");
-                        $("body")
-                            .find("#alg_checkout_files_upload_form_1")
-                            .css("left", paymentDiffX + "px");
-                        $("body")
-                            .find("#alg_checkout_files_upload_form_1")
-                            .css("width", $paymentDestination.width());
-
-                        $("body")
-                            .find(".payment_box.payment_method_cheque .yv-payment_box-inner")
-                            .css(
-                                "height",
-                                $("body").find("#alg_checkout_files_upload_form_1").height()
-                            );
-                    } else {
-                        $("body")
-                            .find("#alg_checkout_files_upload_form_1")
-                            .css("top", -10000 + "px");
-                        $("body")
-                            .find("#alg_checkout_files_upload_form_1")
-                            .removeClass("active");
-                    }
-
-                    if ($("#payment_method_cheque").is(":checked")) {
-                        if ($(".alg_checkout_files_upload_result_1 img")[0]) {
-                            $yvCheckoutButton.removeClass("var-disabled");
-                        } else {
-                            $yvCheckoutButton.addClass("var-disabled");
-                        }
-                    } else {
-                        $yvCheckoutButton.removeClass("var-disabled");
-                    }
-                } else {
-                    $("#alg_checkout_files_upload_form_1").hide();
-                }
-                // file for cheque end
-            }, 1);
-            // PAYMENT POSITION END
-
-            // REVIEW ORDER
-            setInterval(function () {
-                $("#yv_subtotal").text($(".cart-subtotal bdi").text());
-
-                if ($(".review-order-product-item-price")[0]) {
-                    var subTotal = 0;
-
-                    $(".review-order-product-item-price").each(function () {
-                        var itemQuantity = $(this).data("item-quantity");
-
-                        if (itemQuantity <= 0) {
-                            itemQuantity = 1;
-                        }
-
-                        var str_1 = $(this).text();
-                        var res_1 = parseFloat(str_1.replace(/[^\d.-]/g, "")) * itemQuantity;
-
-                        subTotal += parseInt(res_1);
-                    });
-
-                    $("#yv_subtotal").text(
-                        $(".order-total .woocommerce-Price-currencySymbol").eq(0).text() +
-                        " " +
-                        subTotal.toLocaleString("en-US")
-                    );
-                }
-
-                if (
-                    $("#shipping_method")
-                        .find("input:checked")
-                        .parents("li")
-                        .find(".woocommerce-Price-amount")[0]
-                ) {
-                    $("#yv_shipping_cost").text(
-                        $("#shipping_method")
-                            .find("input:checked")
-                            .parents("li")
-                            .find(".woocommerce-Price-amount")
-                            .text()
-                    );
-                } else {
-                    $("#yv_shipping_cost").text(0);
-                }
-                if ($(".order-total .includes_tax .woocommerce-Price-amount")[0]) {
-                    $("#yv_taxes").text(
-                        $(".order-total .includes_tax .woocommerce-Price-amount").text()
-                    );
-                } else {
-                    $("#yv_taxes").text(0);
-                }
-                if ($(".cart-discount")[0]) {
-                    $("#yv_discount").text(
-                        $(".cart-discount .woocommerce-Price-amount").text()
-                    );
-                } else {
-                    $("#yv_discount").text(0);
-                }
-                $("#yv_total").text($(".order-total bdi").text());
-            }, 1000);
-            // REVIEW ORDER END
+        } else {
+            // todo show message
         }
 
-        if (orderReceived[0]) {
-            $("footer").hide();
+        self.avfShippingMethods.show();
+        self.avfShippingLoader.hide();
+        self.checkIfCanOpenThirdStep();
+    }
 
-            $("section.type-custom-checkout .step-item").addClass("active completed");
+    observePaymentMethods() {
+        const self = this;
 
-            let $registerButton = $("#yv_register_after_checkout"),
-                buttonInfo = $(".woocommerce-info a.button");
-            $registerButton.attr("href", buttonInfo.attr("href"));
-            if (!buttonInfo[0]) {
-                $registerButton.hide();
+        // render into custom container
+        const paymentMethodHTML = `<div class="avf-payment-method-container"></div>`;
+        self.body
+            .find(".wc_payment_method")
+            .each(function () {
+                if (!$(this).find(".avf-payment-method-container").length) {
+                    $(this).prepend(paymentMethodHTML);
+                    $(this).find(".avf-payment-method-container").prepend($(this).find("> label"));
+                    $(this).find(".avf-payment-method-container").prepend('<div class="avf-payment-method-checkbox"></div>');
+                    $(this).find(".avf-payment-method-container").prepend($(this).find("> input"));
+                    $(this).on("click", function() {
+                        self.observeBankAttachment($(this))
+                    })
+                }
+            });
+
+        // relocate
+        const wooPaymentMethods = self.body.find(".wc_payment_methods")
+        if (self.currentStep === 3) {
+            console.log('relocating payment methods');
+            wooPaymentMethods.show();
+            self.fileUploader.show();
+
+            const wooPaymentContainer = $("#payment"),
+                avfPaymentContainer = $(".step-content-payment-container-for-woo"),
+                y = avfPaymentContainer.offset().top - wooPaymentContainer.offset().top,
+                x = avfPaymentContainer.offset().left - wooPaymentContainer.offset().left;
+            avfPaymentContainer.css("height", wooPaymentMethods.height());
+            wooPaymentMethods.css("top", y + "px");
+            wooPaymentMethods.css("left", x + "px");
+            wooPaymentMethods.css("width", avfPaymentContainer.width());
+        } else {
+            wooPaymentMethods.hide();
+            self.fileUploader.hide();
+        }
+    }
+
+    observeBankAttachment(element = null) {
+        const self = this;
+        if ($("#payment .payment_method_cheque").length) {
+            if (!$("#payment .payment_method_cheque .avf-banktransfer-attachment").length) {
+                self.body.find(".payment_box.payment_method_cheque").append('<div class="avf-banktransfer-attachment"></div>');
             }
-
-            $("#yv_order_number").text("#" + $(".woocommerce-order-overview__order strong").text());
+        } else {
+            self.fileUploader.hide();
         }
 
-        setInterval(function () {
-            $(".elementor-menu-cart__product-image.product-thumbnail").height(
-                $(".elementor-menu-cart__product-image.product-thumbnail").width()
+        if (!element) {
+            element = $('body').find("input[name='payment_method']:checked").parent();
+        }
+
+        if (element) {
+            if (element.find("input[name='payment_method']").attr('id') === 'payment_method_cheque') {
+                let from = $(".woocommerce-notices-wrapper"),
+                    to = $(".avf-banktransfer-attachment"),
+                    y = to.offset().top - from.offset().top,
+                    x = to.offset().left - from.offset().left;
+                to.css("height", self.fileUploader.height());
+                self.fileUploader.css("top", y + "px");
+                self.fileUploader.css("left", x + "px");
+                self.fileUploader.css("width", to.width());
+                if ($(".alg_checkout_files_upload_result_1 img").length) {
+                    self.avfPlaceOrder.removeClass("var-disabled");
+                } else {
+                    self.avfPlaceOrder.addClass("var-disabled");
+                }
+            } else {
+                self.fileUploader.css("top", -10000 + "px");
+                self.avfPlaceOrder.removeClass("var-disabled");
+            }
+        }
+    }
+
+    observeOrderSummary() {
+        // subtotal
+        if ($(".review-order-product-item-price").length) {
+            let subTotal = 0;
+            $(".review-order-product-item-price").each(function () {
+                let itemQuantity = $(this).data("item-quantity");
+                if (itemQuantity <= 0) {
+                    itemQuantity = 1;
+                }
+                subTotal += parseFloat($(this).text().replace(/[^\d.-]/g, "")) * itemQuantity;
+            });
+            $("#avf_subtotal").text(
+                $(".order-total .woocommerce-Price-currencySymbol").eq(0).text() +
+                " " +
+                subTotal.toLocaleString("en-US")
             );
+        } else {
+            $("#avf_subtotal").text($(".cart-subtotal bdi").text());
+        }
 
-            if (
-                $("#yv_billing_pais").val() == "CR" ||
-                $("#yv_billing_pais").val() == "Costa Rica"
-            ) {
-                if ($("#yv_distrito_and_postal_row").is(".g__form-row-1-of-2")) {
-                    $("#yv_distrito_and_postal_row").removeClass("g__form-row-1-of-2");
-                    $("#yv_billing_distrito").parents(".g__form-input").hide();
-                    $("#yv_billing_distrito").val("Country is Costa Rica");
-                    $("#yv_billing_distrito").trigger("input");
-                }
-            } else {
-                if (!$("#yv_distrito_and_postal_row").is(".g__form-row-1-of-2")) {
-                    $("#yv_distrito_and_postal_row").addClass("g__form-row-1-of-2");
-                    $("#yv_billing_distrito").parents(".g__form-input").show();
-                    $("#yv_billing_distrito").val("");
-                }
-            }
+        // shipping cost
+        if ($("#shipping_method")
+            .find("input:checked")
+            .parents("li")
+            .find(".woocommerce-Price-amount")[0]
+        ) {
+            $("#avf_shipping_cost").text(
+                $("#shipping_method")
+                    .find("input:checked")
+                    .parents("li")
+                    .find(".woocommerce-Price-amount")
+                    .text()
+            );
+        } else {
+            $("#avf_shipping_cost").text(0);
+        }
 
-            if (
-                $("#yv_billing_pais").val() == "MX" ||
-                $("#yv_billing_pais").val() == "México" ||
-                $("#yv_billing_pais").val() == "Mexico"
-            ) {
-                $("#yv_billing_provincia")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_provincia")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("mexico-text"));
-                $("#yv_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("mexico-text"));
-                $("#yv_billing_distrito")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label")
-                    .data("mexico-text");
-                $("#yv_billing_distrito")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_distrito")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("mexico-text"));
-            } else {
-                $("#yv_billing_provincia")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_provincia")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-                $("#yv_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-                $("#yv_billing_distrito")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_distrito")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-            }
+        // tax
+        if ($(".order-total .includes_tax .woocommerce-Price-amount").length) {
+            $("#avf_taxes").text(
+                $(".order-total .includes_tax .woocommerce-Price-amount").text()
+            );
+        } else {
+            $("#avf_taxes").text(0);
+        }
 
-            if (
-                $("#yv_billing_pais").val() == "CR" ||
-                $("#yv_billing_pais").val() == "Costa Rica"
-            ) {
-                $("#yv_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("costa-rica-text"));
-            } else {
-                $("#yv_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-            }
+        // discount
+        if ($(".cart-discount").length) {
+            $("#avf_discount").text(
+                $(".cart-discount .woocommerce-Price-amount").text()
+            );
+        } else {
+            $("#avf_discount").text(0);
+        }
 
-            // --------------------
+        // total
+        $("#avf_total").text($(".order-total bdi").text());
+    }
 
-            if (
-                $("#yv_dif_billing_pais").val() == "CR" ||
-                $("#yv_dif_billing_pais").val() == "Costa Rica"
-            ) {
-                if ($("#yv_dif_distrito_and_postal_row").is(".g__form-row-1-of-2")) {
-                    $("#yv_dif_distrito_and_postal_row").removeClass("g__form-row-1-of-2");
-                    $("#yv_dif_billing_distrito").parents(".g__form-input").hide();
-                    $("#yv_dif_billing_distrito").val("Country is Costa Rica");
-                    $("#yv_dif_billing_distrito").trigger("input");
-                }
-            } else {
-                if (!$("#yv_dif_distrito_and_postal_row").is(".g__form-row-1-of-2")) {
-                    $("#yv_dif_distrito_and_postal_row").addClass("g__form-row-1-of-2");
-                    $("#yv_dif_billing_distrito").parents(".g__form-input").show();
-                    $("#yv_dif_billing_distrito").val("");
-                }
-            }
+    executeObserve() {
+        console.log('executing observe');
+        const self = this;
+        self.observeShippingMethods();
+        self.observePaymentMethods();
+        self.observeBankAttachment();
+        self.observeOrderSummary();
+    }
 
-            if (
-                $("#yv_dif_billing_pais").val() == "MX" ||
-                $("#yv_dif_billing_pais").val() == "México" ||
-                $("#yv_dif_billing_pais").val() == "Mexico"
-            ) {
-                $("#yv_dif_billing_provincia")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_dif_billing_provincia")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("mexico-text"));
-                $("#yv_dif_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_dif_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("mexico-text"));
-                $("#yv_dif_billing_distrito")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text( $("#yv_dif_billing_distrito")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("mexico-text"));
-            } else {
-                $("#yv_dif_billing_provincia")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_dif_billing_provincia")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-                $("#yv_dif_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text( $("#yv_dif_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-                $("#yv_dif_billing_distrito")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_dif_billing_distrito")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-            }
-
-            if (
-                $("#yv_dif_billing_pais").val() == "CR" ||
-                $("#yv_dif_billing_pais").val() == "Costa Rica"
-            ) {
-                $("#yv_dif_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_dif_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("costa-rica-text"));
-            } else {
-                $("#yv_dif_billing_canton")
-                    .parents(".g__form-input")
-                    .find(".g__form-input-label b")
-                    .text($("#yv_dif_billing_canton")
-                        .parents(".g__form-input")
-                        .find(".g__form-input-label")
-                        .data("text"));
-            }
-        }, 500);
+    initObserve() {
+        const self = this;
+        this.body.on("updated_checkout", function () {
+            console.log('updated_checkout');
+            self.executeObserve();
+        });
+        ['scroll', 'resize'].map((event) => {
+            window.addEventListener(event, function(){
+                self.observePaymentMethods();
+                self.observeBankAttachment();
+            });
+        });
     }
 }
