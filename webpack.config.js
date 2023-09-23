@@ -6,7 +6,6 @@ module.exports = {
     devtool: 'source-map',
     entry: {
         js: [
-            'babel-polyfill',
             './assets/js/avify.js'
         ],
         scss:

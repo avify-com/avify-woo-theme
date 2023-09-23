@@ -10,21 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            --color-black: #000000;
-            --color-grey: #494F53;
-            --color-grey-2: #626262;
-            --color-grey-3: #484848;
-            --color-dark: #000000;
-            --color-red: #F2210A;
-            --color-accent: #AC8138;
-            --color-accent-2: #00543B;
-        }
-    </style>
-    <link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/avify.css?v=2.0.7"/>
-    <script type="module" src="<?php bloginfo('template_url'); ?>/assets/avify.js?v=2.0.7"></script>
+    <link type="text/css" rel="stylesheet" href="<?php bloginfo('template_url'); ?>/assets/avify.css?v=2.0.3">
+    <script type="module" src="<?php bloginfo('template_url'); ?>/assets/avify.js?v=2.0.3"></script>
     <title></title>
 </head>
 
