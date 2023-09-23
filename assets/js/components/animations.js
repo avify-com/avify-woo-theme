@@ -437,7 +437,7 @@ export default class Animations {
             customOffset = "95%";
         }
 
-        if (localStorage.getItem("loadFinish") == "true") {
+        if (localStorage.getItem("loadFinish") === "true") {
             timeBeforeExecutingAnimation = 10;
         } else {
             timeBeforeExecutingAnimation = 10;

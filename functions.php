@@ -1,6 +1,4 @@
 <?php
-
-include dirname(__FILE__) . '/templates/custom_checkout.php';
 include dirname(__FILE__) . '/templates/logo_shortcode.php';
 
 // Shortcode to output custom PHP in Elementor
